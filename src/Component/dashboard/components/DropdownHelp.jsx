@@ -44,7 +44,7 @@ function DropdownHelp({
       >
         <span className="sr-only">Need help?</span>
          <AiOutlineInfoCircle
-      size={16}
+      size={20}
       className="text-gray-500/80 dark:text-gray-400/80"
     />
       </button>

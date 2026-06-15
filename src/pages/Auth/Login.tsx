@@ -18,12 +18,10 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const email = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
-  
   useEffect(() => {
     if (authState.isAuthenticated && authState.user) {
       console.log("Auth state updated - redirecting to dashboard");
-      navigate("/dashboard", { replace: true });
-
+      navigate("/dashboard", { replace: true }); 
     }
   }, [authState.isAuthenticated, authState.user, navigate]);
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard/dashboard";
 import ResetPassword from "./pages/settings/resetPassword";
 import MyAccount from "./pages/settings/myAccount";
 import Feedback from "./pages/settings/Feedback";
+import Report from "./pages/Dashboard/Report";
 import Notifications from "./pages/settings/notifications";
 import Billing from "./pages/settings/billing";
 import Plans from "./pages/settings/plans";
@@ -18,7 +19,7 @@ import Main from "./pages/Dashboard/main";
 import Analytics from "./pages/Dashboard/analytics";
 import ManageAccounts from "./pages/Dashboard/ManageAccounts";
 import Investment from "./pages/manageaccounts/Investment";
-import Report from "./pages/manageaccounts/Report";
+
 import Security from "./pages/manageaccounts/Security";
 import Profile from "./pages/finance/Profile";
 import Cards from "./pages/finance/Cards";
@@ -70,6 +71,7 @@ function App() {
             <Route path="/cards" element={<Cards />}/>
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
+            <Route path="/report-generation" element={<Report />} />
           </Route>
         </Route>
         <Route

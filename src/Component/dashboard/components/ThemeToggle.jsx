@@ -26,13 +26,13 @@ export default function ThemeToggle() {
   >
     {/* Sun Icon (Light Mode) */}
     <HiSun
-      size={16}
+      size={20}
       className="dark:hidden text-gray-500/80 dark:text-gray-400/80"
     />
 
     {/* Moon Icon (Dark Mode) */}
     <HiMoon
-      size={16}
+      size={20}
       className="hidden dark:block text-gray-500/80 dark:text-gray-400/80"
     />
 
