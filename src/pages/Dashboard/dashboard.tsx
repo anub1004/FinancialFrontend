@@ -13,8 +13,14 @@ import DashboardCard12 from "../../Component/partials/dashboard/DashboardCard12.
 import DashboardCard13 from "../../Component/partials/dashboard/DashboardCard13.jsx";
 import FilterButton from "../../Component/dashboard/components/DropdownFilter.jsx";
 import Datepicker from "../../Component/dashboard/components/Datepicker.jsx";
+import { useState } from "react";
 function Dashboard() {
   const { authState } = useAuth();
+    const [dateRange, setDateRange] = useState([
+    new Date("2026-06-01"),
+    new Date("2026-06-15"),
+  ]);
+  const [startDate, endDate] = dateRange;
 
   if (authState.loading) {
     return (
@@ -28,15 +34,6 @@ function Dashboard() {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-4xl font-bold">Unauthorized Access</h1>
-      </div>
-    );
-  }
-
-  if (authState.role && authState.role !== "Admin") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <h1 className="text-4xl font-bold">Access Denied</h1>
-        <p className="text-lg mt-4">Your role: {authState.role}</p>
       </div>
     );
   }
@@ -58,7 +55,11 @@ function Dashboard() {
             {/* Filter button */}
             <FilterButton align="right" />
             {/* Datepicker built with React Day Picker */}
-            <Datepicker align="right" />
+            <Datepicker align="right"   selectsRange
+      startDate={startDate}
+      endDate={endDate}
+      onChange={(update) => setDateRange(update)}
+      isClearable/>
             {/* Add view button */}
             <button className="btn bg-gray-900 text-gray-100 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white">
               <svg
@@ -74,11 +75,14 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Cards */}
         <div className="grid grid-cols-12 gap-6">
-          <DashboardCard01 />
+          {(authState.role === "Admin" || authState.role === "User") && (
+            <DashboardCard01 />
+          )}
 
-          <DashboardCard02 />
+           {(authState.role === "Admin" || authState.role === "User") && (
+  <DashboardCard02/>
+)}
 
           <DashboardCard03 />
 
