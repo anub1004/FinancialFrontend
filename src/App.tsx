@@ -3,14 +3,14 @@ import { Toaster } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Auth/Login";
 import Dashboard from "./pages/Dashboard/dashboard";
-import ResetPassword from "./pages/settings/resetPassword";
-import MyAccount from "./pages/settings/myAccount";
-import Feedback from "./pages/settings/Feedback";
+import ResetPassword from "./pages/settings/resetpassword";
+import MyAccount from "./pages/settings/myaccount";
+import Feedback from "./pages/settings/feedback";
 import Report from "./pages/Dashboard/Report";
 import Notifications from "./pages/settings/notifications";
 import Billing from "./pages/settings/billing";
 import Plans from "./pages/settings/plans";
-import UserManagement from "./pages/manageaccounts/UserManagement";
+import UserManagement from "./pages/manageaccounts/Usermanagement";
 import Transactions from "./pages/manageaccounts/Transactions";
 import News from "./pages/News/News";
 import MainLayout from "./MainLayout";
@@ -24,7 +24,8 @@ import Security from "./pages/manageaccounts/Security";
 import Profile from "./pages/finance/Profile";
 import Cards from "./pages/finance/Cards";
 import Transaction from "./pages/finance/Transaction";
-import TransactionDetails from "./pages/finance/TransactionDetail";
+import TransactionDetails from "./pages/finance/Transactiondetail";
+import Onboarding from "./pages/Onboarding/Onboarding";
 function App() {
   const { authState } = useAuth();
   return (
@@ -52,6 +53,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/news" element={<News />} />
             <Route path="/reset-password" element={<ResetPassword></ResetPassword>} />
             <Route path="/myaccount" element={<MyAccount />} />

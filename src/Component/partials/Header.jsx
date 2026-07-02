@@ -42,6 +42,7 @@ function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
           <div className="flex items-center space-x-3">
             <NavLink
               to="/news"
+              data-tour="news-nav"
               className="text-lg font-bold text-gray-800 dark:text-gray-100"
             >
               <button
@@ -93,7 +94,9 @@ function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
             </div>
             <Notifications align="right" />
             <Help align="right" />
-            <ThemeToggle />
+            <div data-tour="theme-toggle">
+              <ThemeToggle />
+            </div>
             {/*  Divider */}
             <hr className="w-px h-6 bg-gray-200 dark:bg-gray-700/60 border-none" />
             <UserMenu align="right" />

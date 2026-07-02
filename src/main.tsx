@@ -5,13 +5,17 @@ import './index.css'
 import App from './App.tsx'
 import ThemeProvider from "./Component/utils/ThemeContext";
 import { AuthProvider } from './context/AuthContext.tsx'
+import { TourProvider } from './tours/TourProvider.tsx'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-    <ThemeProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <TourProvider>
+            <App />
+          </TourProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,

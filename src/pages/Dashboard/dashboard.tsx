@@ -16,12 +16,11 @@ import Datepicker from "../../Component/dashboard/components/Datepicker.jsx";
 import { useState } from "react";
 function Dashboard() {
   const { authState } = useAuth();
-    const [dateRange, setDateRange] = useState([
+  const [dateRange, setDateRange] = useState([
     new Date("2026-06-01"),
     new Date("2026-06-15"),
   ]);
   const [startDate, endDate] = dateRange;
-
   if (authState.loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -29,7 +28,6 @@ function Dashboard() {
       </div>
     );
   }
-
   if (!authState.isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -37,29 +35,33 @@ function Dashboard() {
       </div>
     );
   }
-
   return (
     <div className="sm:flex sm:justify-between sm:items-center mb-8">
       <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
         {/* Dashboard actions */}
         <div className="sm:flex sm:justify-between sm:items-center mb-8">
           {/* Left: Title */}
-          <div className="mb-4 sm:mb-0">
+          <div className="mb-4 sm:mb-0" data-tour="dashboard-header">
             <h1 className="text-2xl md:text-3xl text-gray-800 dark:text-gray-100 font-bold">
               Dashboard
             </h1>
           </div>
-
           {/* Right: Actions */}
-          <div className="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2">
+          <div
+            data-tour="dashboard-actions"
+            className="grid grid-flow-col sm:auto-cols-max justify-start sm:justify-end gap-2"
+          >
             {/* Filter button */}
             <FilterButton align="right" />
             {/* Datepicker built with React Day Picker */}
-            <Datepicker align="right"   selectsRange
-      startDate={startDate}
-      endDate={endDate}
-      onChange={(update) => setDateRange(update)}
-      isClearable/>
+            <Datepicker
+              align="right"
+              selectsRange
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(update: any) => setDateRange(update)}
+              isClearable
+            />
             {/* Add view button */}
             <button className="btn bg-gray-900 text-gray-100 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white">
               <svg
@@ -75,14 +77,14 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
+        <div data-tour="dashboard-cards" className="grid grid-cols-12 gap-6">
           {(authState.role === "Admin" || authState.role === "User") && (
             <DashboardCard01 />
           )}
 
-           {(authState.role === "Admin" || authState.role === "User") && (
-  <DashboardCard02/>
-)}
+          {(authState.role === "Admin" || authState.role === "User") && (
+            <DashboardCard02 />
+          )}
 
           <DashboardCard03 />
 

@@ -1,20 +1,25 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const ThemeContext = createContext({
+interface ThemeContextType {
+  currentTheme: string;
+  changeCurrentTheme: (newTheme: string) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType>({
   currentTheme: 'light',
   changeCurrentTheme: () => {},
 });
 
-export default function ThemeProvider({children}) {  
+export default function ThemeProvider({ children }: { children: React.ReactNode }) {  
   const getBrowserTheme = () => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   };
   console.log('getBrowserTheme', getBrowserTheme());
   const persistedTheme = localStorage.getItem('theme');
   const initialTheme = persistedTheme || getBrowserTheme();
-  const [theme, setTheme] = useState( initialTheme);
+  const [theme, setTheme] = useState(initialTheme);
 
-  const changeCurrentTheme = (newTheme) => {
+  const changeCurrentTheme = (newTheme: string) => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
   };

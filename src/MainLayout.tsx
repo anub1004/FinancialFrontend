@@ -10,7 +10,7 @@ function MainLayout(){
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Main content */}
-      <div className="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
+      <div id="main-content" className="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
         {/* Header */}
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         {/* Main */}
