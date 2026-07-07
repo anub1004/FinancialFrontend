@@ -100,6 +100,29 @@ export const appTourSteps: TourStep[] = [
 
      scrollToTop: true,
   },
+ {
+    target: '[data-tour="ReportGeneration"]',
+    title: "Generate Reports 📄",
+    content:
+      "Create detailed financial reports to analyze your portfolio, transactions, and overall performance.",
+    placement: "top",
+    skipBeacon: true,
+    route: "/dashboard",
+    scrollTargetSelector: '[data-tour="ReportGeneration"]',
+    scrollToTop: true,
+  },
+  {
+    target: '[data-tour="Settings"]',
+    title: "Application Settings ⚙️",
+    content:
+      "Manage your account preferences, security options, and application settings from here.",
+    placement: "top",
+    skipBeacon: true,
+    route: "/dashboard",
+    scrollTargetSelector: '[data-tour="Settings"]',
+    scrollToTop: true,
+  },
+  
   {
     target: '[data-tour="news-nav"]',
     title: "Finance News Feed 📰",
@@ -109,6 +132,17 @@ export const appTourSteps: TourStep[] = [
     skipBeacon: true,
     route: "/dashboard",
    
+  },
+   {
+    target: '[data-tour="Notifications"]',
+    title: "Notifications 🔔",
+    content:
+      "View important alerts, reminders, and system updates so you never miss critical information.",
+    placement: "top",
+    skipBeacon: true,
+    route: "/dashboard",
+    scrollTargetSelector: '[data-tour="Notifications"]',
+    scrollToTop: true,
   },
   {
     target: '[data-tour="theme-toggle"]',

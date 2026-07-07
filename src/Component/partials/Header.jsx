@@ -46,19 +46,7 @@ function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
               className="text-lg font-bold text-gray-800 dark:text-gray-100"
             >
               <button
-                className="
-    px-5 py-2
-    bg-sky-500
-    text-white
-    font-medium
-    rounded-lg
-    shadow-md
-    hover:bg-sky-600
-    hover:shadow-lg
-    transition-all
-    duration-200
-    cursor-pointer
-  "
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group"
               >
                 News
               </button>
@@ -92,7 +80,7 @@ function Header({ sidebarOpen, setSidebarOpen, variant = "default" }) {
                 setModalOpen={setSearchModalOpen}
               />
             </div>
-            <Notifications align="right" />
+            <Notifications align="right"  />
             <Help align="right" />
             <div data-tour="theme-toggle">
               <ThemeToggle />

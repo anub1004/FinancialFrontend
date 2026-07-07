@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import NewsComponent from "../../Component/News/NewsComponent";
 import { DatabaseFinanceNewsConfig, DatabaseTodayNewsConfig } from "../../config/apiconfig";
-
 interface Article {
   title?: string;
   description?: string;
@@ -11,7 +10,6 @@ interface Article {
   source?: { name?: string };
   publishedAt?: string;
 }
-
 function FinanceNewsSection() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +17,6 @@ function FinanceNewsSection() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 12;
-
   const fetchFinanceNews = useCallback(async (page: number = 1) => {
     setLoading(true);
     setError("");
@@ -29,6 +26,7 @@ function FinanceNewsSection() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const body = await res.json();
+      console.log("Finance News Response:", body); // Debugging line
       const raw: any[] = body?.items ?? [];
       if (raw.length === 0 && page === 1) throw new Error("No articles found");
 
@@ -73,12 +71,12 @@ function FinanceNewsSection() {
   const pageNumbers = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
 
   return (
-    <div className="p-6">
+    <div className="p-6">                                                  
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Finance News</h2>
+        <h2 className="text-xl font-bold text-indigo-900 dark:text-indigo-200">Finance News</h2>
         <button
           onClick={() => { setCurrentPage(1); fetchFinanceNews(1); }}
-          className="px-3 py-1.5 text-xs font-medium text-violet-600 border border-violet-200 dark:text-violet-400 dark:border-violet-800 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 dark:text-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
         >
           Refresh
         </button>
@@ -91,12 +89,12 @@ function FinanceNewsSection() {
               key={i}
               className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-pulse"
             >
-              <div className="aspect-[16/9] bg-slate-200 dark:bg-slate-750" />
+              <div className="aspect-[16/9] bg-indigo-100 dark:bg-indigo-950/40" />
               <div className="p-4 space-y-3">
-                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
-                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
+                <div className="h-3 bg-indigo-100 dark:bg-indigo-900/40 rounded w-1/3" />
+                <div className="h-4 bg-indigo-100 dark:bg-indigo-900/40 rounded w-full" />
+                <div className="h-4 bg-indigo-100 dark:bg-indigo-900/40 rounded w-2/3" />
+                <div className="h-3 bg-indigo-100 dark:bg-indigo-900/40 rounded w-1/4" />
               </div>
             </div>
           ))}
@@ -106,7 +104,7 @@ function FinanceNewsSection() {
           <p className="text-sm text-red-500">{error}</p>
           <button
             onClick={() => fetchFinanceNews(currentPage)}
-            className="px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Retry
           </button>
@@ -132,13 +130,13 @@ function FinanceNewsSection() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-center items-center gap-2 pt-6 border-t border-indigo-100 dark:border-indigo-900/40">
               <button
                 onClick={() => goToPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
               >
-                Prev
+                Prev  
               </button>
 
               {pageNumbers.map((pageNum) => (
@@ -147,8 +145,8 @@ function FinanceNewsSection() {
                   onClick={() => goToPage(pageNum)}
                   className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${
                     currentPage === pageNum
-                      ? "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/20"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
+                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent shadow-md shadow-indigo-500/25"
+                      : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
                   }`}
                 >
                   {pageNum}
@@ -158,7 +156,7 @@ function FinanceNewsSection() {
               <button
                 onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Next
               </button>
@@ -187,6 +185,7 @@ function TodayNewsSection() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const body = await res.json();
+      console.log("Today News Response:", body); // Debugging line
       const raw: any[] = body?.items ?? [];
       if (raw.length === 0 && page === 1) throw new Error("No articles found");
 
@@ -233,10 +232,10 @@ function TodayNewsSection() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Today News</h2>
+        <h2 className="text-xl font-bold text-indigo-900 dark:text-indigo-200">Today's News</h2>
         <button
           onClick={() => { setCurrentPage(1); fetchTodayNews(1); }}
-          className="px-3 py-1.5 text-xs font-medium text-violet-600 border border-violet-200 dark:text-violet-400 dark:border-violet-800 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 dark:text-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-colors"
         >
           Refresh
         </button>
@@ -249,12 +248,12 @@ function TodayNewsSection() {
               key={i}
               className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-pulse"
             >
-              <div className="aspect-[16/9] bg-slate-200 dark:bg-slate-750" />
+              <div className="aspect-[16/9] bg-indigo-100 dark:bg-indigo-950/40" />
               <div className="p-4 space-y-3">
-                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3" />
-                <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
+                <div className="h-3 bg-indigo-100 dark:bg-indigo-900/40 rounded w-1/3" />
+                <div className="h-4 bg-indigo-100 dark:bg-indigo-900/40 rounded w-full" />
+                <div className="h-4 bg-indigo-100 dark:bg-indigo-900/40 rounded w-2/3" />
+                <div className="h-3 bg-indigo-100 dark:bg-indigo-900/40 rounded w-1/4" />
               </div>
             </div>
           ))}
@@ -264,7 +263,7 @@ function TodayNewsSection() {
           <p className="text-sm text-red-500">{error}</p>
           <button
             onClick={() => fetchTodayNews(currentPage)}
-            className="px-4 py-2 text-sm font-medium text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Retry
           </button>
@@ -290,11 +289,11 @@ function TodayNewsSection() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-center items-center gap-2 pt-6 border-t border-indigo-100 dark:border-indigo-900/40">
               <button
                 onClick={() => goToPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Prev
               </button>
@@ -305,8 +304,8 @@ function TodayNewsSection() {
                   onClick={() => goToPage(pageNum)}
                   className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${
                     currentPage === pageNum
-                      ? "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/20"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700"
+                      ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent shadow-md shadow-indigo-500/25"
+                      : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
                   }`}
                 >
                   {pageNum}
@@ -316,7 +315,7 @@ function TodayNewsSection() {
               <button
                 onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Next
               </button>
@@ -333,12 +332,12 @@ function News() {
   return (
     <div className="space-y-6 ">
       <div className="flex">
-        <div className="inline-flex rounded-xl bg-slate-100 p-1 shadow-sm border border-slate-200">
+        <div className="inline-flex rounded-xl bg-indigo-50 dark:bg-indigo-950/40 p-1.5 shadow-sm border border-indigo-100 dark:border-indigo-800/50">
           <button
             className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === "moneyControl"
-                ? "bg-white text-sky-600 shadow-md"
-                : "text-slate-600 hover:text-sky-600"
+                ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
+                : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
             }`}
             onClick={() => setActiveTab("moneyControl")}
           >
@@ -348,8 +347,8 @@ function News() {
           <button
             className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === "FinanceNews"
-                ? "bg-white text-sky-600 shadow-md"
-                : "text-slate-600 hover:text-sky-600"
+                ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
+                : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
             }`}
             onClick={() => setActiveTab("FinanceNews")}
           >
@@ -359,8 +358,8 @@ function News() {
            <button
             className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
               activeTab === "TodayNews"
-                ? "bg-white text-sky-600 shadow-md"
-                : "text-slate-600 hover:text-sky-600"
+                ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
+                : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
             }`}
             onClick={() => setActiveTab("TodayNews")}
           >
@@ -369,7 +368,7 @@ function News() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden" >
+      <div className="rounded-2xl border border-indigo-100 dark:border-indigo-800/50 bg-white dark:bg-gray-800 shadow-sm overflow-hidden" >
         {activeTab === "moneyControl" && (
           <iframe
             src="https://www.moneycontrol.com/"
