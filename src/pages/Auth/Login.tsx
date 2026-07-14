@@ -1,6 +1,5 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import styles from "./Login.module.css";
-import Signup from "./Signup";
 import { Eye, EyeOff, Mail } from "lucide-react";
 import Financial from "../../assets/Financial.jpeg";
 import toast from "react-hot-toast";
@@ -10,14 +9,62 @@ type LoginForm = {
   email: string;
   password: string;
 };
+
+const GOOGLE_CLIENT_ID = "395266048874-6e5u5gigf5pkln4n5rkbk5i3ofqt3f8i.apps.googleusercontent.com";
+
 function Login() {
-  let { login, authState } = useAuth();
+  let { login, googleLogin, authState } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp">("signIn");
-  const [signUp, setSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const email = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
+
+  const handleGoogleResponse = useCallback(async (response: any) => {
+    try {
+      toast.loading("Signing in with Google...", { id: "google-login" });
+      await googleLogin(response.credential);
+      toast.success("Login successful!", { id: "google-login" });
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 1000);
+    } catch (err: any) {
+      toast.error(err.message || "Google sign-in failed", { id: "google-login" });
+    }
+  }, [googleLogin, navigate]);
+
+  useEffect(() => {
+    const initializeGoogle = () => {
+      const google = (window as any).google;
+      if (google?.accounts?.id) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+
+        const buttonContainer = document.getElementById("googleSignInButton");
+        if (buttonContainer) {
+          buttonContainer.innerHTML = "";
+          google.accounts.id.renderButton(
+            buttonContainer,
+            { theme: "outline", size: "large", width: "100%" }
+          );
+        }
+        return true;
+      }
+      return false;
+    };
+
+    if (!initializeGoogle()) {
+      const interval = setInterval(() => {
+        if (initializeGoogle()) {
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [handleGoogleResponse]);
+
   useEffect(() => {
     if (authState.isAuthenticated && authState.user) {
       console.log("Auth state updated - redirecting to dashboard");
@@ -79,9 +126,7 @@ function Login() {
       }
     }, 2000);
   };
-  return signUp ? (
-    <Signup setSignUp={setSignUp} />
-  ) : (
+  return (
     <main className={styles.page}>
       <section className={styles.shell}>
         <div className={styles.formPanel}>
@@ -115,7 +160,7 @@ function Login() {
               <button
                 type="button"
                 className={`${styles.tabButton} ${activeTab === "signUp" ? styles.tabActive : ""}`}
-                onClick={() => setSignUp(true)}
+                onClick={() => navigate("/signup")}
               >
                 Signup
               </button>
@@ -153,6 +198,12 @@ function Login() {
                 Continue
               </button>
             </form>
+            <div className={styles.googlelog}>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "#e2e8f0" }}></div>
+              <span style={{ color: "#718096", fontSize: "14px" }}>or</span>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "#e2e8f0" }}></div>
+            </div>
+            <div id="googleSignInButton" style={{ width: "100%", minHeight: "44px" }}></div>
           </div>
           <p className={styles.footerText}>
             Manage your finances with ease and confidence. Sign in to access

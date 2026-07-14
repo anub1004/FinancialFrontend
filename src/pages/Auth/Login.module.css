@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  padding: 3.2rem;
+  padding: 2.2rem;
   display: grid;
   place-items: center;
   background:
@@ -11,12 +11,13 @@
 
 .shell {
   width: min(100%, 1120px);
-  min-height: min(100vh - 6.4rem, 720px);
+  min-height: min(100vh - 6.4rem, 700px);
   display: grid;
   grid-template-columns: minmax(390px, 1fr) minmax(360px, 1fr);
   overflow: hidden;
+
   border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 2px;
+  border-radius:1rem ;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 32px 80px rgba(94, 109, 137, 0.14);
 }
@@ -495,6 +496,8 @@ transition: all 0.3s ease;
    position: absolute;
   right: 10px;
   cursor: pointer;}
+
+.googlelog{ margin: "0px 0"; display:"flex";alignItems: "center";justifyContent: "center";gap: "2px" }
 
 @media (max-width: 560px) {
   .page {

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Auth/Login";
+import Signup from "./pages/Auth/Signup";
 import Dashboard from "./pages/Dashboard/dashboard";
 import ResetPassword from "./pages/settings/resetpassword";
 import MyAccount from "./pages/settings/myaccount";
@@ -38,7 +39,7 @@ function App() {
           element={
             authState.isAuthenticated
               ? <Navigate to="/dashboard" replace />
-              : <Login />
+              : <Navigate to="/login" replace />
           }
         />
         <Route
@@ -47,6 +48,14 @@ function App() {
             authState.isAuthenticated
               ? <Navigate to="/dashboard" replace />
               : <Login />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            authState.isAuthenticated
+              ? <Navigate to="/dashboard" replace />
+              : <Signup />
           }
         />
         {/* Protected Routes */}

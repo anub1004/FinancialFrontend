@@ -5,11 +5,9 @@ import Register from "../../assets/Registerlogo.jpeg";
 import { ApiConfig } from "../../config/apiconfig";
 import axios from "axios";
 import toast from "react-hot-toast";
-function Signup({
-  setSignUp,
-}: {
-  setSignUp: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
+import { useNavigate } from "react-router-dom";
+function Signup() {
+  const navigate = useNavigate();
   let username = useRef<HTMLInputElement>(null);
   let email = useRef<HTMLInputElement>(null);
   let password = useRef<HTMLInputElement>(null);
@@ -71,7 +69,7 @@ function Signup({
           <div className={styles.topRow}>
             <div className={styles.brandPill}>
               <span className={styles.brandIcon} aria-hidden="true" />
-              <span> Financial Management</span>
+              <span onClick={() => navigate("/login")} className={styles.back}> Financial Management</span>
             </div>
           </div>
 
@@ -137,7 +135,7 @@ function Signup({
           </div>
 
           <div className={styles.footerRow}>
-            <p onClick={() => setSignUp(false)}>Have any account? Sign In</p>
+            <p onClick={() => navigate("/login")}>Have any account? Sign In</p>
           </div>
         </div>
 

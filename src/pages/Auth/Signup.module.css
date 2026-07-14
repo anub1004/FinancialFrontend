@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  padding: 3rem;
+  padding: 2rem;
   display: grid;
   place-items: center;
   background:
@@ -11,14 +11,14 @@
 
 .shell {
   width: min(100%, 1120px);
-  min-height: min(100vh - 6rem, 720px);
+  min-height: min(100vh - 5.4rem, 700px);
   display: grid;
-  grid-template-columns: minmax(390px, 1fr) minmax(380px, 1.05fr);
+  grid-template-columns: minmax(390px, 1fr) minmax(360px, 1fr);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  border-radius: 2rem;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 36px 90px rgba(88, 103, 128, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius:1rem ;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 32px 80px rgba(94, 109, 137, 0.14);
 }
 
 .formPanel {
@@ -26,8 +26,7 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 1.5rem 2rem 1.25rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 249, 235, 0.98));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(251, 252, 255, 0.95));
 }
 
 .topRow {
@@ -95,6 +94,9 @@
   font-weight: 500;
 }
 
+.back{
+  cursor: pointer;
+}
 .header p {
   margin: 0.55rem 0 0;
   font-size: 0.84rem;
@@ -152,14 +154,14 @@
   color: #ffffff;
   font-size: 1rem;
   font-weight: 500;
-  box-shadow: 0 18px 28px rgba(240, 189, 47, 0.26);
+  box-shadow: 0 18px 28px rgba(255, 255, 255, 0.26);
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
 transition: all 0.3s ease;
 }
 .primaryButton:hover {
   transform: translateY(-2px);
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  box-shadow: 0 22px 32px rgba(240, 189, 47, 0.36);
+  box-shadow: 0 22px 32px rgba(254, 254, 254, 0.36);
 }
 .socialRow {
   width: 100%;
@@ -247,7 +249,7 @@ transition: all 0.3s ease;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 1.9rem;
+
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 

@@ -11,6 +11,7 @@ interface AuthState {
 interface AuthContextType {
   authState: AuthState;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
 }
@@ -103,6 +104,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(error.message || "Login failed");
     }
   };
+  const googleLogin = async (idToken: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, loading: true }));
+      const response = await fetch(ApiConfig.Api_Base_Url + "api/Auth/google-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("refreshtoken", data.refreshtoken);
+        }
+        await checkAuth();
+      } else {
+        setAuthState(prev => ({ ...prev, loading: false }));
+        throw new Error(data.message || "Google Login failed");
+      }
+    } catch (error: any) {
+      setAuthState(prev => ({ ...prev, loading: false }));
+      throw new Error(error.message || "Google Login failed");
+    }
+  };
   const logout = async () => {
     try {
       console.log("Performing logout...");
@@ -151,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
   return (
-    <AuthContext.Provider value={{ authState, login, logout, setAuthState }}>
+    <AuthContext.Provider value={{ authState, login, googleLogin, logout, setAuthState }}>
       {children}
     </AuthContext.Provider>
   );
