@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-let Logout = () => {
+const Logout = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
     useEffect(() => {   

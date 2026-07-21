@@ -20,7 +20,7 @@ import Main from "./pages/Dashboard/main";
 import Analytics from "./pages/Dashboard/analytics";
 import ManageAccounts from "./pages/Dashboard/ManageAccounts";
 import Investment from "./pages/manageaccounts/Investment";
-
+import RestPassword from "./pages/settings/resetpassword";
 import Security from "./pages/manageaccounts/Security";
 import Profile from "./pages/finance/Profile";
 import Cards from "./pages/finance/Cards";
@@ -64,7 +64,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/news" element={<News />} />
-            <Route path="/reset-password" element={<ResetPassword></ResetPassword>} />
+            <Route path="/reset-password" element={<RestPassword></RestPassword>} />
             <Route path="/myaccount" element={<MyAccount />} />
             <Route path="/plans" element={<Plans></Plans>} />
             <Route path="/billing" element={<Billing />} />

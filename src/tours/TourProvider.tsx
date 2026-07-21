@@ -89,29 +89,6 @@ function scrollMainToTop() {
   }
 }
 
-/**
- * Scroll an element into view inside the main-content scrollable container.
- */
-function scrollElementIntoView(el: Element) {
-  const mainContent = document.getElementById("main-content");
-  if (mainContent) {
-    const elRect = el.getBoundingClientRect();
-    const containerRect = mainContent.getBoundingClientRect();
-    const scrollTop =
-      mainContent.scrollTop +
-      (elRect.top - containerRect.top) -
-      containerRect.height / 2 +
-      elRect.height / 2;
-
-    mainContent.scrollTo({
-      top: Math.max(0, scrollTop),
-      behavior: "smooth",
-    });
-  }
-}
-
-
-
 // ──────────────────────────────────────────────────────────────
 // Provider
 // ──────────────────────────────────────────────────────────────
@@ -276,7 +253,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${activeTourName}`) ===
       "true";
     setIsCompleted(completed);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [activeTourName, authState.isAuthenticated]);
 
   // ──────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-let Api_Base_Url = "https://localhost:7085/";
+const Api_Base_Url = "https://localhost:7085/";
 
 export interface PaginatedApiConfig {
   baseUrl: string;
