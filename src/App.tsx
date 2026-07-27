@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useAuth } from "./context/AuthContext";
+import { SubscriptionProvider } from "./context/SubscriptionContext";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
 import Dashboard from "./pages/Dashboard/dashboard";
@@ -27,11 +28,15 @@ import Cards from "./pages/finance/Cards";
 import Transaction from "./pages/finance/Transaction";
 import TransactionDetails from "./pages/finance/Transactiondetail";
 import Onboarding from "./pages/Onboarding/Onboarding";
+import PlanManagement from "./pages/admin/PlanManagement";
+import FeatureManagement from "./pages/admin/FeatureManagement";
+import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
 function App() {
   const { authState } = useAuth();
   return (
     <>
       <Toaster position="top-center" />
+      <SubscriptionProvider>
       <Routes>
         {/* Public Routes */}
         <Route
@@ -83,6 +88,10 @@ function App() {
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
             <Route path="/report-generation" element={<Report />} />
+            {/* Admin Routes (role-gated internally) */}
+            <Route path="/admin/plans" element={<PlanManagement />} />
+            <Route path="/admin/features" element={<FeatureManagement />} />
+            <Route path="/admin/subscriptions" element={<SubscriptionDashboard />} />
           </Route>
         </Route>
         <Route
@@ -95,6 +104,7 @@ function App() {
           }
         />
       </Routes>
+      </SubscriptionProvider>
     </>
   );
 }

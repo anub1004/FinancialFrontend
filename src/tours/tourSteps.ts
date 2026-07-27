@@ -155,9 +155,6 @@ export const appTourSteps: TourStep[] = [
   },
 ];
 
-/**
- * Dictionary supporting multiple tours for future extensible architecture.
- */
 export const toursRegistry: Record<string, TourStep[]> = {
   default: appTourSteps,
 };

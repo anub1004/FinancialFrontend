@@ -100,6 +100,7 @@ export const TourProvider: React.FC<{ children: React.ReactNode }> = ({
   const { authState } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+ 
 
   // ── State ──────────────────────────────────────────────────
   const [run, setRun] = useState(false);
