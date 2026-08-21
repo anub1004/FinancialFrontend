@@ -110,6 +110,26 @@ export default function Billing() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your subscription and view billing history</p>
       </div>
 
+      {/* Cancel-until-deadline banner */}
+      {current && current.statusName === "Cancelled" && new Date(current.endDate) > new Date() && (
+        <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 flex items-start gap-3">
+          <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              Your subscription has been cancelled
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
+              You'll continue to have full access to all features until{" "}
+              <span className="font-semibold">
+                {new Date(current.endDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              </span>. After this date, your account will revert to the free plan.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Current Subscription */}
       {current ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mb-8 overflow-hidden">

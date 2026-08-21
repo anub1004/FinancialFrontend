@@ -15,13 +15,13 @@ import Plans from "./pages/settings/plans";
 import UserManagement from "./pages/manageaccounts/Usermanagement";
 import Transactions from "./pages/manageaccounts/Transactions";
 import News from "./pages/News/News";
+import FeatureRoute from "./Component/FeatureRoute";
 import MainLayout from "./MainLayout";
 import ProtectedRoute from "./ProtectedLayout";
 import Main from "./pages/Dashboard/main";
 import Analytics from "./pages/Dashboard/analytics";
 import ManageAccounts from "./pages/Dashboard/ManageAccounts";
 import Investment from "./pages/manageaccounts/Investment";
-import RestPassword from "./pages/settings/resetpassword";
 import Security from "./pages/manageaccounts/Security";
 import Profile from "./pages/finance/Profile";
 import Cards from "./pages/finance/Cards";
@@ -63,31 +63,57 @@ function App() {
               : <Signup />
           }
         />
+       
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
+            {/* Free plan features — always accessible */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/news" element={<News />} />
-            <Route path="/reset-password" element={<RestPassword></RestPassword>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/myaccount" element={<MyAccount />} />
             <Route path="/plans" element={<Plans></Plans>} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/feedback" element={<Feedback />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/main" element={<Main></Main>}/>
-            <Route path="/analytics" element={<Analytics/>}/>
             <Route path="/manage-accounts" element={<ManageAccounts />}/>
-            <Route path="/user-management" element={<UserManagement />}/>
             <Route path="/transactions" element={<Transactions />}/>
-            <Route path="/investment-monitoring" element={<Investment />} />
-            <Route path="/reports-analytics" element={<Report/>} />
-            <Route path="security" element={<Security />} />
+            <Route path="/security" element={<Security />} />
             <Route path="/profile" element={<Profile></Profile>}/>
-            <Route path="/cards" element={<Cards />}/>
+            
+
+            {/* Analytics — requires 'analytics' feature (Basic+) */}
+            <Route element={<FeatureRoute feature="analytics" />}>
+              <Route path="/analytics" element={<Analytics/>}/>
+            </Route>
+
+            {/* Investment Monitoring — requires 'investment_tracking' feature (Basic+) */}
+            <Route element={<FeatureRoute feature="investment_tracking" />}>
+              <Route path="/investment-monitoring" element={<Investment />} />
+            </Route>
+
+            {/* Cards — requires 'cards' feature (Basic+) */}
+            <Route element={<FeatureRoute feature="cards" />}>
+              <Route path="/cards" element={<Cards />}/>
+            </Route>
+
+            {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
-            <Route path="/report-generation" element={<Report />} />
+
+            {/* Reports — requires 'reports' feature (Advanced+) */}
+            <Route element={<FeatureRoute feature="reports" />}>
+              <Route path="/reports-analytics" element={<Report/>} />
+              <Route path="/report-generation" element={<Report />} />
+            </Route>
+
+            {/* User Management — requires 'user_management' feature (Pro) */}
+            <Route element={<FeatureRoute feature="user_management" />}>
+              <Route path="/user-management" element={<UserManagement />}/>
+            </Route>
+
             {/* Admin Routes (role-gated internally) */}
             <Route path="/admin/plans" element={<PlanManagement />} />
             <Route path="/admin/features" element={<FeatureManagement />} />

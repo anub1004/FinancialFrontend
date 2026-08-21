@@ -23,8 +23,9 @@ function FinanceNewsSection() {
     try {
       const url = `${DatabaseFinanceNewsConfig.url}${DatabaseFinanceNewsConfig.url.includes("?") ? "&" : "?"}page=${page}&pageSize=${pageSize}`;
       const res = await fetch(url);
+      console.log(res); // Debugging line
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
+
       const body = await res.json();
       console.log("Finance News Response:", body); // Debugging line
       const raw: any[] = body?.items ?? [];
@@ -38,8 +39,8 @@ function FinanceNewsSection() {
         title: item.title,
         description: item.description,
         url: item.url,
-        source: typeof item.source === "string" 
-          ? { name: item.source } 
+        source: typeof item.source === "string"
+          ? { name: item.source }
           : (item.source?.name ? { name: item.source.name } : undefined),
         publishedAt: item.published_at ?? item.publishedAt,
         urlToImage: item.imageUrl,
@@ -71,7 +72,7 @@ function FinanceNewsSection() {
   const pageNumbers = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
 
   return (
-    <div className="p-6">                                                  
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-indigo-900 dark:text-indigo-200">Finance News</h2>
         <button
@@ -136,18 +137,17 @@ function FinanceNewsSection() {
                 disabled={currentPage === 1}
                 className="px-4 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
               >
-                Prev  
+                Prev
               </button>
 
               {pageNumbers.map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => goToPage(pageNum)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${
-                    currentPage === pageNum
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${currentPage === pageNum
                       ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent shadow-md shadow-indigo-500/25"
                       : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
-                  }`}
+                    }`}
                 >
                   {pageNum}
                 </button>
@@ -183,7 +183,7 @@ function TodayNewsSection() {
       const url = `${DatabaseTodayNewsConfig.url}${DatabaseTodayNewsConfig.url.includes("?") ? "&" : "?"}page=${page}&pageSize=${pageSize}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
+
       const body = await res.json();
       console.log("Today News Response:", body); // Debugging line
       const raw: any[] = body?.items ?? [];
@@ -197,8 +197,8 @@ function TodayNewsSection() {
         title: item.title,
         description: item.description,
         url: item.url,
-        source: typeof item.source === "string" 
-          ? { name: item.source } 
+        source: typeof item.source === "string"
+          ? { name: item.source }
           : (item.source?.name ? { name: item.source.name } : undefined),
         publishedAt: item.published_at ?? item.publishedAt,
         urlToImage: item.imageUrl,
@@ -302,11 +302,10 @@ function TodayNewsSection() {
                 <button
                   key={pageNum}
                   onClick={() => goToPage(pageNum)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${
-                    currentPage === pageNum
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-semibold border transition-all duration-200 ${currentPage === pageNum
                       ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent shadow-md shadow-indigo-500/25"
                       : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 dark:bg-gray-800 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
-                  }`}
+                    }`}
                 >
                   {pageNum}
                 </button>
@@ -334,33 +333,30 @@ function News() {
       <div className="flex">
         <div className="inline-flex rounded-xl bg-indigo-50 dark:bg-indigo-950/40 p-1.5 shadow-sm border border-indigo-100 dark:border-indigo-800/50">
           <button
-            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-              activeTab === "moneyControl"
+            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${activeTab === "moneyControl"
                 ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
                 : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
-            }`}
+              }`}
             onClick={() => setActiveTab("moneyControl")}
           >
             Money Control
           </button>
-        
+
           <button
-            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-              activeTab === "FinanceNews"
+            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${activeTab === "FinanceNews"
                 ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
                 : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
-            }`}
+              }`}
             onClick={() => setActiveTab("FinanceNews")}
           >
             Finance News
           </button>
 
-           <button
-            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${
-              activeTab === "TodayNews"
+          <button
+            className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${activeTab === "TodayNews"
                 ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/25"
                 : "text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-100 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30"
-            }`}
+              }`}
             onClick={() => setActiveTab("TodayNews")}
           >
             Today News
@@ -376,8 +372,12 @@ function News() {
             title="Money Control"
           />
         )}
-        {activeTab === "FinanceNews" && <FinanceNewsSection />}
-        {activeTab === "TodayNews" && <TodayNewsSection />}
+        <div style={{ display: activeTab === "FinanceNews" ? "block" : "none" }}>
+          <FinanceNewsSection />
+        </div>
+        <div style={{ display: activeTab === "TodayNews" ? "block" : "none" }}>
+          <TodayNewsSection />
+        </div>
       </div>
     </div>
   );

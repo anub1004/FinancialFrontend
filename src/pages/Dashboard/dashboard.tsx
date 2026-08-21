@@ -1,4 +1,5 @@
 import { useAuth } from "../../context/AuthContext";
+import FeatureGate from "../../Component/FeatureGate";
 import DashboardCard01 from "../../Component/partials/dashboard/DashboardCard01.jsx";
 import DashboardCard02 from "../../Component/partials/dashboard/DashboardCard02.jsx";
 import DashboardCard03 from "../../Component/partials/dashboard/DashboardCard03.jsx";
@@ -78,6 +79,7 @@ function Dashboard() {
         </div>
 
         <div data-tour="dashboard-cards" className="grid grid-cols-12 gap-6">
+          {/* ── Core financial overview cards (Free plan) ── */}
           {(authState.role === "Admin" || authState.role === "User") && (
             <DashboardCard01 />
           )}
@@ -88,26 +90,30 @@ function Dashboard() {
 
           <DashboardCard03 />
 
-          <DashboardCard04 />
+          {/* ── Analytics cards — require 'analytics' feature (Basic+) ── */}
+          <FeatureGate feature="analytics" fallback={null}>
+            <DashboardCard04 />
+            <DashboardCard05 />
+            <DashboardCard06 />
+          </FeatureGate>
 
-          <DashboardCard05 />
+          {/* ── Investment & Sales cards — require 'investment_tracking' (Basic+) ── */}
+          <FeatureGate feature="investment_tracking" fallback={null}>
+            <DashboardCard08 />
+            <DashboardCard09 />
+          </FeatureGate>
 
-          <DashboardCard06 />
-
-          <DashboardCard08 />
-
-          <DashboardCard09 />
-
-          <DashboardCard10 />
-
-          <DashboardCard11 />
-
-          <DashboardCard12 />
-
-          <DashboardCard13 />
+          {/* ── Advanced cards — require 'premium_analytics' (Advanced+) ── */}
+          <FeatureGate feature="premium_analytics" fallback={null}>
+            <DashboardCard10 />
+            <DashboardCard11 />
+            <DashboardCard12 />
+            <DashboardCard13 />
+          </FeatureGate>
         </div>
       </div>
     </div>
   );
 }
 export default Dashboard;
+

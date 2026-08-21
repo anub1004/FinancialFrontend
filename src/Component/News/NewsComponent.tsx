@@ -38,9 +38,8 @@ function NewsComponent({
             <img
               src={imageUrl}
               alt={title || ""}
-              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
-                imgLoaded ? "opacity-100" : "opacity-0"
-              }`}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"
+                }`}
               onLoad={() => setImgLoaded(true)}
               onError={() => { setImgError(true); setImgLoaded(true); }}
               loading="lazy"

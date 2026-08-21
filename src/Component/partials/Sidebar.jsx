@@ -12,8 +12,10 @@ function Sidebar({
   const location = useLocation();
   const { pathname } = location;
   const { logout, authState } = useAuth();
-  const { hasFeature } = useSubscription();
+  const { hasFeature, subscription } = useSubscription();
   const { restartTour } = useTour();
+  // While features are loading, treat all features as accessible (no flash of lock icons)
+  const canAccess = (key) => subscription.loading || hasFeature(key);
   const trigger = useRef(null);
   const sidebar = useRef(null);
   const storedSidebarExpanded = localStorage.getItem("sidebar-expanded");
@@ -161,6 +163,7 @@ function Sidebar({
                             </NavLink>
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('analytics') ? (
                             <NavLink
                               end
                               to="/analytics"
@@ -172,6 +175,18 @@ function Sidebar({
                                 Analytics
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink
+                              end
+                              to="/plans"
+                              className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Analytics
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                           
                         </ul>
@@ -199,11 +214,20 @@ function Sidebar({
                             <svg className={`shrink-0 fill-current ${pathname.includes('ecommerce') ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
                               <path d="M9 6.855A3.502 3.502 0 0 0 8 0a3.5 3.5 0 0 0-1 6.855v1.656L5.534 9.65a3.5 3.5 0 1 0 1.229 1.578L8 10.267l1.238.962a3.5 3.5 0 1 0 1.229-1.578L9 8.511V6.855ZM6.5 3.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm4.803 8.095c.005-.005.01-.01.013-.016l.012-.016a1.5 1.5 0 1 1-.025.032ZM3.5 11c.474 0 .897.22 1.171.563l.013.016.013.017A1.5 1.5 0 1 1 3.5 11Z" />
                             </svg>
+                            {canAccess('reports') ? (
                             <NavLink to="/report-generation" className="block text-gray-800 dark:text-gray-100" >
                             <span className="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
                               Report Generation
                             </span>
                             </NavLink>
+                            ) : (
+                            <NavLink to="/plans" className="block text-gray-400 dark:text-gray-500" >
+                            <span className="text-sm font-medium ml-4 lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                              <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                              Report Generation
+                            </span>
+                            </NavLink>
+                            )}
                           
                           </div>
                           {/* Icon */}
@@ -250,6 +274,7 @@ function Sidebar({
                       <div className="lg:hidden lg:sidebar-expanded:block 2xl:block">
                         <ul className={`pl-8 mt-1 ${!open && "hidden"}`}>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('cards') ? (
                             <NavLink
                               end
                               to="/cards"
@@ -261,8 +286,17 @@ function Sidebar({
                                 Cards
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Cards
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('transactions') ? (
                             <NavLink
                               end
                               to="/transaction"
@@ -274,8 +308,17 @@ function Sidebar({
                                 Transactions
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Transactions
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('transactions') ? (
                             <NavLink
                               end
                               to="/transaction-details"
@@ -287,6 +330,14 @@ function Sidebar({
                                 Transaction Details
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Transaction Details
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                         </ul>
                       </div>
@@ -344,6 +395,7 @@ function Sidebar({
                             </NavLink>
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('user_management') ? (
                             <NavLink
                               end
                               to="/user-management"
@@ -355,6 +407,14 @@ function Sidebar({
                                 User Management
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                User Management
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                           <li className="mb-1 last:mb-0">
                             <NavLink
@@ -370,6 +430,7 @@ function Sidebar({
                             </NavLink>
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('investment_tracking') ? (
                             <NavLink
                               end
                               to="/investment-monitoring"
@@ -381,6 +442,15 @@ function Sidebar({
                                 Investment Monitoring
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Investment Monitoring
+                              </span>
+                            </NavLink>
+                            )}
+                            {canAccess('reports') ? (
                              <NavLink
                               end
                               to="/reports-analytics"
@@ -392,8 +462,17 @@ function Sidebar({
                                 Reports & Analytics
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Reports & Analytics
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                           <li className="mb-1 last:mb-0">
+                            {canAccess('security_settings') ? (
                             <NavLink
                               end
                               to="/security"
@@ -405,6 +484,14 @@ function Sidebar({
                                 Security & Audit
                               </span>
                             </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Security & Audit
+                              </span>
+                            </NavLink>
+                            )}
                           </li>
                         </ul>
                       </div>

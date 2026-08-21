@@ -95,37 +95,48 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       const token = localStorage.getItem("token");
+      const authHeaders: Record<string, string> = {
+        Authorization: token ? `Bearer ${token}` : "",
+      };
 
-      const response = await fetch(
-        ApiConfig.Api_Base_Url + "api/subscription/my-features",
-        {
-          credentials: "include",
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-        },
-      );
+      // Fetch features and current subscription in parallel
+      const [featuresResponse, currentResponse] = await Promise.all([
+        fetch(
+          ApiConfig.Api_Base_Url + "api/subscription/my-features",
+          { credentials: "include", headers: authHeaders },
+        ),
+        fetch(
+          ApiConfig.Api_Base_Url + "api/subscription/current",
+          { credentials: "include", headers: authHeaders },
+        ),
+      ]);
 
-      if (!response.ok) {
+      if (!featuresResponse.ok) {
         // Non-200 — user may not have a subscription (404) or token expired
         setSubscription((prev) => ({
           ...prev,
           features: EMPTY_SET,
           loading: false,
-          error: response.status !== 404, // 404 is expected for users without subscription
+          error: featuresResponse.status !== 404, // 404 is expected for users without subscription
         }));
         return;
       }
 
-      const data = await response.json();
+      const featuresData = await featuresResponse.json();
+
+      // Parse current subscription data (may be 404 if no active subscription)
+      let currentSub: any = null;
+      if (currentResponse.ok) {
+        currentSub = await currentResponse.json();
+      }
 
       setSubscription({
-        planId: authState.planId ?? data.planId ?? null,
-        planSlug: authState.planSlug ?? data.planSlug ?? null,
-        planName: authState.planName ?? data.planName ?? null,
-        status: authState.subscriptionStatus ?? null,
-        endDate: null, // Populated from /current if needed
-        features: new Set<string>(data.featureKeys ?? []),
+        planId: currentSub?.planId ?? authState.planId ?? featuresData.planId ?? null,
+        planSlug: currentSub?.planSlug ?? authState.planSlug ?? featuresData.planSlug ?? null,
+        planName: currentSub?.planName ?? authState.planName ?? featuresData.planName ?? null,
+        status: currentSub?.statusName ?? currentSub?.status ?? authState.subscriptionStatus ?? null,
+        endDate: currentSub?.endDate ?? null,
+        features: new Set<string>(featuresData.featureKeys ?? []),
         loading: false,
         error: false,
       });

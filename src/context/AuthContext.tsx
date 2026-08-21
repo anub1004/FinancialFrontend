@@ -7,8 +7,7 @@ interface AuthState {
   role: string | null;
   userId: string | null;
   isAuthenticated: boolean;
-  loading: boolean;
-  // Subscription fields (Phase 8)
+  loading: boolean;  // Subscription fields (Phase 8)
   planId: string | null;
   planSlug: string | null;
   planName: string | null;
@@ -31,7 +30,7 @@ interface AuthContextType {
   ) => Promise<any>;
   requestEmailRecoveryCode: (email: string) => Promise<void>;
   loginWithEmailVerificationCode: (email: string, code: string) => Promise<any>;
-  verifySignupEmailOtp: (email: string, code: string) => Promise<any>;
+  verifySignupEmailOtp: (email: string, code: string, totpSessionToken?: string) => Promise<any>;
   logout: () => Promise<void>;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
   checkAuth: () => Promise<void>;
@@ -176,6 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (response.ok) {
         if (data.token) {
           localStorage.setItem("token", data.token);
+
           localStorage.setItem("refreshtoken", data.refreshtoken);
           await checkAuth();
         } else {
@@ -298,13 +298,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return data;
   };
 
-  const verifySignupEmailOtp = async (email: string, code: string) => {
+  const verifySignupEmailOtp = async (email: string, code: string, totpSessionToken?: string) => {
     const response = await fetch(
       ApiConfig.Api_Base_Url + "api/Auth/verify-signup-email-otp",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code, totpSessionToken }),
       },
     );
     const data = await response.json();
