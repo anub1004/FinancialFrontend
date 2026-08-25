@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     role: null,
     userId: null,
     isAuthenticated: false,
-    loading: false,
+    loading: true,
     planId: null,
     planSlug: null,
     planName: null,

@@ -18,13 +18,13 @@ export const NewsApiConfig: { url: string; headers?: Record<string, string> } = 
 };
 export const NewApiConfig: PaginatedApiConfig = {
   baseUrl: "https://api.apilayer.com/financelayer/news?date=today&keywords=stocks&sort=desc",
-  headers: {"apikey": "UqLwn3LNQqxxdJ8I1tGWOgW1JhNSRTDo"},
+  headers: {"apikey": "RoSTgPutP9kQf7W7Et1jf7BPywbZZ1"},
   defaultOffset: 0,
 }; 
 
 export const NewsApiConfig2: PaginatedApiConfig = {
   baseUrl: "https://api.apilayer.com/financelayer/news?date=today&fallback=off&sort=desc",
-  headers: {"apikey": "UqLwn3LNQqxxdJ8I1tGWOgW1JhNSRTDo"},
+  headers: {"apikey": "RoSTgPutP9kQf7W7Et1jf7BPywbZZ1"},
   defaultOffset: 0,
 };
 

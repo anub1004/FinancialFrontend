@@ -33,6 +33,7 @@ import FeatureManagement from "./pages/admin/FeatureManagement";
 import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
 function App() {
   const { authState } = useAuth();
+
   return (
     <>
       <Toaster position="top-center" />

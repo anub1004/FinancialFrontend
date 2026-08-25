@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import NewsComponent from "../../Component/News/NewsComponent";
 import { DatabaseFinanceNewsConfig, DatabaseTodayNewsConfig } from "../../config/apiconfig";
 interface Article {
@@ -59,7 +60,7 @@ function FinanceNewsSection() {
   }, [fetchFinanceNews, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-
+ 
   const goToPage = (page: number) => {
     setCurrentPage(page);
     const container = document.getElementById("main-content");
@@ -327,7 +328,16 @@ function TodayNewsSection() {
 }
 
 function News() {
-  const [activeTab, setActiveTab] = useState("moneyControl");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab = requestedTab === "moneyControl" || requestedTab === "FinanceNews" || requestedTab === "TodayNews"
+    ? requestedTab
+    : "TodayNews";
+
+  const setActiveTab = (tab: string) => {
+    setSearchParams({ tab }, { replace: true });
+  };
+
   return (
     <div className="space-y-6 ">
       <div className="flex">
