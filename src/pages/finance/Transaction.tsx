@@ -13,7 +13,7 @@ interface TransactionItem {
   category: string;
   description: string;
   transactionDate: string;
-  transactionType: number;
+  transactionType: number | string;
   transactionTypeName: string;
   currency: string;
   paymentMethod: string | null;
@@ -42,6 +42,12 @@ interface CategoryItem {
 const PAYMENT_METHODS = ["Cash", "UPI", "Card", "NetBanking", "Wallet", "Cheque"];
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "SGD"];
 
+// Helper: normalize enum value to "Income" or "Expense" regardless of API format (string or int)
+const isIncome = (type: number | string): boolean => {
+  if (typeof type === "string") return type === "Income" || type === "1";
+  return type === 1;
+};
+
 function Transaction() {
   const { authState } = useAuth();
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -67,7 +73,7 @@ function Transaction() {
     category: "",
     description: "",
     transactionDate: new Date().toISOString().split("T")[0],
-    transactionType: 2, // Expense by default
+    transactionType: "Expense" as string, // Use string to match JsonStringEnumConverter
     currency: "INR",
     paymentMethod: "",
     isRecurring: false,
@@ -138,7 +144,7 @@ function Transaction() {
       category: "",
       description: "",
       transactionDate: new Date().toISOString().split("T")[0],
-      transactionType: 2,
+      transactionType: "Expense",
       currency: "INR",
       paymentMethod: "",
       isRecurring: false,
@@ -154,7 +160,7 @@ function Transaction() {
       category: t.category,
       description: t.description,
       transactionDate: t.transactionDate.split("T")[0],
-      transactionType: t.transactionType,
+      transactionType: isIncome(t.transactionType) ? "Income" : "Expense",
       currency: t.currency,
       paymentMethod: t.paymentMethod || "",
       isRecurring: t.isRecurring,
@@ -174,27 +180,17 @@ function Transaction() {
         ? `${ApiConfig.Api_Base_Url}api/transactions/${editingId}`
         : `${ApiConfig.Api_Base_Url}api/transactions`;
 
-      const body = editingId
-        ? {
-            amount: parseFloat(formData.amount),
-            category: formData.category,
-            description: formData.description,
-            transactionDate: formData.transactionDate,
-            transactionType: formData.transactionType,
-            currency: formData.currency,
-            paymentMethod: formData.paymentMethod || null,
-            isRecurring: formData.isRecurring,
-          }
-        : {
-            amount: parseFloat(formData.amount),
-            category: formData.category,
-            description: formData.description,
-            transactionDate: formData.transactionDate,
-            transactionType: formData.transactionType,
-            currency: formData.currency,
-            paymentMethod: formData.paymentMethod || null,
-            isRecurring: formData.isRecurring,
-          };
+      // Send enum as string ("Income"/"Expense") to match backend JsonStringEnumConverter
+      const body = {
+        amount: parseFloat(formData.amount),
+        category: formData.category,
+        description: formData.description,
+        transactionDate: formData.transactionDate,
+        transactionType: formData.transactionType,
+        currency: formData.currency,
+        paymentMethod: formData.paymentMethod || null,
+        isRecurring: formData.isRecurring,
+      };
 
       const res = await fetch(url, {
         method: editingId ? "PUT" : "POST",
@@ -203,7 +199,7 @@ function Transaction() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) throw new Error(data.error || data.title || "Failed");
       toast.success(editingId ? "Transaction updated!" : "Transaction added!");
       setShowModal(false);
       resetForm();
@@ -401,7 +397,7 @@ function Transaction() {
                   {transactions.map((t) => (
                     <tr key={t.transactionId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-6 py-4">
-                        {t.transactionType === 1 ? (
+                        {isIncome(t.transactionType) ? (
                           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <ArrowUpCircle className="w-4 h-4" /> Income
                           </span>
@@ -423,11 +419,11 @@ function Transaction() {
                         {t.description || "—"}
                       </td>
                       <td className={`px-6 py-4 text-sm font-semibold text-right ${
-                        t.transactionType === 1
+                        isIncome(t.transactionType)
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-red-600 dark:text-red-400"
                       }`}>
-                        {t.transactionType === 1 ? "+" : "−"}{formatCurrency(t.amount, t.currency)}
+                        {isIncome(t.transactionType) ? "+" : "−"}{formatCurrency(t.amount, t.currency)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {new Date(t.transactionDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
@@ -509,9 +505,9 @@ function Transaction() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData((f) => ({ ...f, transactionType: 1 }))}
+                    onClick={() => setFormData((f) => ({ ...f, transactionType: "Income" }))}
                     className={`flex-1 py-2.5 text-sm font-medium rounded-lg border transition-colors ${
-                      formData.transactionType === 1
+                      formData.transactionType === "Income"
                         ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300"
                         : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
@@ -520,9 +516,9 @@ function Transaction() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData((f) => ({ ...f, transactionType: 2 }))}
+                    onClick={() => setFormData((f) => ({ ...f, transactionType: "Expense" }))}
                     className={`flex-1 py-2.5 text-sm font-medium rounded-lg border transition-colors ${
-                      formData.transactionType === 2
+                      formData.transactionType === "Expense"
                         ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
                         : "bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
                     }`}
@@ -569,7 +565,7 @@ function Transaction() {
                 >
                   <option value="">Select category...</option>
                   {categories
-                    .filter((c) => c.type === "Both" || c.type === (formData.transactionType === 1 ? "Income" : "Expense"))
+                    .filter((c) => c.type === "Both" || c.type === formData.transactionType)
                     .map((c) => (
                       <option key={c.name} value={c.name}>{c.icon} {c.name}</option>
                     ))}
