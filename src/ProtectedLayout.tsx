@@ -1,6 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import { useFeature } from "./hooks/useFeature";
 import { useSubscription } from "./context/SubscriptionContext";
 
 interface ProtectedRouteProps {

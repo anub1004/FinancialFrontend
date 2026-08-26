@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { useSubscription } from "../../context/SubscriptionContext";
 import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
@@ -28,8 +27,7 @@ interface HistoryItem {
 }
 
 export default function Billing() {
-  const { authState } = useAuth();
-  const { subscription, refreshFeatures } = useSubscription();
+  const { refreshFeatures } = useSubscription();
   const [current, setCurrent] = useState<CurrentSub | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
