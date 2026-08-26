@@ -27,6 +27,7 @@ import Profile from "./pages/finance/Profile";
 import Cards from "./pages/finance/Cards";
 import Transaction from "./pages/finance/Transaction";
 import TransactionDetails from "./pages/finance/Transactiondetail";
+import Goals from "./pages/finance/Goals";
 import Onboarding from "./pages/Onboarding/Onboarding";
 import PlanManagement from "./pages/admin/PlanManagement";
 import FeatureManagement from "./pages/admin/FeatureManagement";
@@ -103,6 +104,7 @@ function App() {
             {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
+            <Route path="/goals" element={<Goals />} />
 
             {/* Reports — requires 'reports' feature (Advanced+) */}
             <Route element={<FeatureRoute feature="reports" />}>
