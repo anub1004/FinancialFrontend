@@ -32,6 +32,10 @@ import Onboarding from "./pages/Onboarding/Onboarding";
 import PlanManagement from "./pages/admin/PlanManagement";
 import FeatureManagement from "./pages/admin/FeatureManagement";
 import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
+import BudgetPlanning from "./pages/finance/BudgetPlanning";
+import PortfolioManagement from "./pages/finance/PortfolioManagement";
+import TaxReports from "./pages/finance/TaxReports";
+import AuditLogViewer from "./pages/finance/AuditLogViewer";
 function App() {
   const { authState } = useAuth();
 
@@ -57,6 +61,8 @@ function App() {
               : <Login />
           }
         />
+        
+         
         <Route
           path="/signup"
           element={
@@ -115,6 +121,26 @@ function App() {
             {/* User Management — requires 'user_management' feature (Pro) */}
             <Route element={<FeatureRoute feature="user_management" />}>
               <Route path="/user-management" element={<UserManagement />}/>
+            </Route>
+
+            {/* Budget Planning — requires 'budget_planning' feature (Advanced+) */}
+            <Route element={<FeatureRoute feature="budget_planning" />}>
+              <Route path="/budget-planning" element={<BudgetPlanning />} />
+            </Route>
+
+            {/* Portfolio Management — requires 'portfolio_management' feature (Pro) */}
+            <Route element={<FeatureRoute feature="portfolio_management" />}>
+              <Route path="/portfolio-management" element={<PortfolioManagement />} />
+            </Route>
+
+            {/* Tax Reports — requires 'tax_reports' feature (Pro) */}
+            <Route element={<FeatureRoute feature="tax_reports" />}>
+              <Route path="/tax-reports" element={<TaxReports />} />
+            </Route>
+
+            {/* Audit Log — requires 'audit_log' feature (Pro) */}
+            <Route element={<FeatureRoute feature="audit_log" />}>
+              <Route path="/audit-log" element={<AuditLogViewer />} />
             </Route>
 
             {/* Admin Routes (role-gated internally) */}

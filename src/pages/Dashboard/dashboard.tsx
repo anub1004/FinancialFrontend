@@ -246,10 +246,15 @@ function Dashboard() {
         <SummaryCard icon={<Wallet className="w-5 h-5 text-violet-600 dark:text-violet-400" />} iconBg="bg-violet-100 dark:bg-violet-900/30" label="Net Balance"
           value={fmt(summary?.netBalance ?? 0, summary?.currency)}
           valueColor={(summary?.netBalance ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"} />
-        <SummaryCard icon={<Briefcase className="w-5 h-5 text-sky-600 dark:text-sky-400" />} iconBg="bg-sky-100 dark:bg-sky-900/30" label="Investments"
-          value={fmt(summary?.investmentCurrentValue ?? 0, summary?.currency)}
-          subtext={`${(summary?.investmentReturns ?? 0) >= 0 ? "+" : ""}${fmt(summary?.investmentReturns ?? 0)} returns`}
-          subtextColor={(summary?.investmentReturns ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"} />
+        <FeatureGate feature="investment_tracking" fallback={
+          <SummaryCard icon={<Briefcase className="w-5 h-5 text-gray-400" />} iconBg="bg-gray-100 dark:bg-gray-700" label="Investments"
+            value="🔒 Basic+" valueColor="text-gray-400 dark:text-gray-500" />
+        }>
+          <SummaryCard icon={<Briefcase className="w-5 h-5 text-sky-600 dark:text-sky-400" />} iconBg="bg-sky-100 dark:bg-sky-900/30" label="Investments"
+            value={fmt(summary?.investmentCurrentValue ?? 0, summary?.currency)}
+            subtext={`${(summary?.investmentReturns ?? 0) >= 0 ? "+" : ""}${fmt(summary?.investmentReturns ?? 0)} returns`}
+            subtextColor={(summary?.investmentReturns ?? 0) >= 0 ? "text-emerald-500" : "text-red-500"} />
+        </FeatureGate>
       </div>
 
       {/* ── Goals Quick Stats ── */}
@@ -394,7 +399,11 @@ function Dashboard() {
       {/* ── Quick Actions ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <QuickAction to="/transaction" icon={<Wallet className="w-5 h-5" />} title="Transactions" desc="Track income & expenses" color="violet" />
-        <QuickAction to="/investment-monitoring" icon={<Briefcase className="w-5 h-5" />} title="Investments" desc="Monitor your portfolio" color="sky" />
+        <FeatureGate feature="investment_tracking" fallback={
+          <QuickAction to="/plans" icon={<Briefcase className="w-5 h-5" />} title="Investments 🔒" desc="Upgrade to Basic+ to unlock" color="sky" />
+        }>
+          <QuickAction to="/investment-monitoring" icon={<Briefcase className="w-5 h-5" />} title="Investments" desc="Monitor your portfolio" color="sky" />
+        </FeatureGate>
         <QuickAction to="/goals" icon={<Target className="w-5 h-5" />} title="Goals" desc="Manage savings goals" color="emerald" />
       </div>
     </div>

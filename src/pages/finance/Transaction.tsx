@@ -4,8 +4,10 @@ import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
 import {
   Plus, Search, Filter, ArrowUpCircle, ArrowDownCircle, Trash2, Pencil, X,
-  ChevronLeft, ChevronRight, Loader, TrendingUp, TrendingDown, Wallet, Calendar
+  ChevronLeft, ChevronRight, Loader, TrendingUp, TrendingDown, Wallet, Calendar, Download
 } from "lucide-react";
+import FeatureGate from "../../Component/FeatureGate";
+import UpgradePrompt from "../../Component/UpgradePrompt";
 
 interface TransactionItem {
   transactionId: string;
@@ -485,6 +487,26 @@ function Transaction() {
         )}
       </div>
 
+      {/* Export CSV — requires 'export_csv' (Basic+) */}
+      <FeatureGate feature="export_csv" fallback={null}>
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={() => {
+              const csv = ["Type,Category,Description,Amount,Date,Method,Recurring",
+                ...transactions.map(t => `${isIncome(t.transactionType) ? "Income" : "Expense"},${t.category},"${t.description}",${t.amount},${t.transactionDate.split("T")[0]},${t.paymentMethod || ""},${t.isRecurring}`)].join("\n");
+              const blob = new Blob([csv], { type: "text/csv" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a"); a.href = url; a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+        </div>
+      </FeatureGate>
+
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -609,16 +631,23 @@ function Transaction() {
                 </div>
               </div>
 
-              {/* Recurring */}
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isRecurring}
-                  onChange={(e) => setFormData((f) => ({ ...f, isRecurring: e.target.checked }))}
-                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">This is a recurring transaction</span>
-              </label>
+              {/* Recurring — requires 'recurring_transactions' (Basic+) */}
+              <FeatureGate feature="recurring_transactions" fallback={
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                  <span className="text-sm text-gray-400 dark:text-gray-500">🔒 Recurring transactions</span>
+                  <UpgradePrompt compact feature="recurring_transactions" />
+                </div>
+              }>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isRecurring}
+                    onChange={(e) => setFormData((f) => ({ ...f, isRecurring: e.target.checked }))}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-violet-600 focus:ring-violet-500"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">This is a recurring transaction</span>
+                </label>
+              </FeatureGate>
 
               {/* Submit */}
               <div className="flex items-center gap-3 pt-2">

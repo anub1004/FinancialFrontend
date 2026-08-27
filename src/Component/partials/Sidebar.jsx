@@ -493,6 +493,94 @@ function Sidebar({
                             </NavLink>
                             )}
                           </li>
+                          <li className="mb-1 last:mb-0">
+                            {canAccess('budget_planning') ? (
+                            <NavLink
+                              end
+                              to="/budget-planning"
+                              className={({ isActive }) =>
+                                "block transition duration-150 truncate " + (isActive ? "text-violet-500" : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
+                              }
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                Budget Planning
+                              </span>
+                            </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Budget Planning
+                              </span>
+                            </NavLink>
+                            )}
+                          </li>
+                          <li className="mb-1 last:mb-0">
+                            {canAccess('portfolio_management') ? (
+                            <NavLink
+                              end
+                              to="/portfolio-management"
+                              className={({ isActive }) =>
+                                "block transition duration-150 truncate " + (isActive ? "text-violet-500" : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
+                              }
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                Portfolio
+                              </span>
+                            </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Portfolio
+                              </span>
+                            </NavLink>
+                            )}
+                          </li>
+                          <li className="mb-1 last:mb-0">
+                            {canAccess('tax_reports') ? (
+                            <NavLink
+                              end
+                              to="/tax-reports"
+                              className={({ isActive }) =>
+                                "block transition duration-150 truncate " + (isActive ? "text-violet-500" : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
+                              }
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                Tax Reports
+                              </span>
+                            </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Tax Reports
+                              </span>
+                            </NavLink>
+                            )}
+                          </li>
+                          <li className="mb-1 last:mb-0">
+                            {canAccess('audit_log') ? (
+                            <NavLink
+                              end
+                              to="/audit-log"
+                              className={({ isActive }) =>
+                                "block transition duration-150 truncate " + (isActive ? "text-violet-500" : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
+                              }
+                            >
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200">
+                                Audit Log
+                              </span>
+                            </NavLink>
+                            ) : (
+                            <NavLink end to="/plans" className="block transition duration-150 truncate text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400">
+                              <span className="text-sm font-medium lg:opacity-0 lg:sidebar-expanded:opacity-100 2xl:opacity-100 duration-200 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                                Audit Log
+                              </span>
+                            </NavLink>
+                            )}
+                          </li>
                         </ul>
                       </div>
                     </React.Fragment>

@@ -4,8 +4,9 @@ import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
 import {
   Plus, Pencil, Trash2, X, Loader, Target, TrendingUp,
-  CheckCircle, AlertCircle, DollarSign
+  CheckCircle, AlertCircle, DollarSign, Sparkles
 } from "lucide-react";
+import FeatureGate from "../../Component/FeatureGate";
 
 interface GoalItem {
   goalId: string;
@@ -191,6 +192,23 @@ function Goals() {
           </div>
         </div>
       </div>
+
+      {/* Goal Recommendations — requires 'goal_recommendations' (Advanced+) */}
+      <FeatureGate feature="goal_recommendations" fallback={null}>
+        <div className="mb-6 p-4 rounded-2xl border border-violet-200 dark:border-violet-800/50 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/20 dark:to-indigo-900/20">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40">
+              <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">🎯 Smart Goal Recommendations</h3>
+              <p className="text-xs text-violet-600/80 dark:text-violet-400/80 mt-0.5">
+                Based on your spending patterns, consider setting an emergency fund goal of {fmt(totalTarget > 0 ? totalTarget * 0.2 : 50000)} — you're saving {totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0}% toward your targets!
+              </p>
+            </div>
+          </div>
+        </div>
+      </FeatureGate>
 
       {/* Filter */}
       <div className="flex flex-wrap gap-2 mb-6">
