@@ -39,3 +39,31 @@ export const DatabaseTodayNewsConfig = {
 export const ApiConfig = {
   Api_Base_Url,
 };
+
+// ── Sprint 1: Core Financial API Endpoints ──────────────────────────────
+export const TransactionApiConfig = {
+  list: `${Api_Base_Url}api/transactions`,
+  summary: `${Api_Base_Url}api/transactions/summary`,
+  categories: `${Api_Base_Url}api/transactions/categories`,
+  byId: (id: string) => `${Api_Base_Url}api/transactions/${id}`,
+};
+
+export const InvestmentApiConfig = {
+  list: `${Api_Base_Url}api/investments`,
+  summary: `${Api_Base_Url}api/investments/summary`,
+  byId: (id: string) => `${Api_Base_Url}api/investments/${id}`,
+};
+
+export const GoalApiConfig = {
+  list: `${Api_Base_Url}api/goals`,
+  byId: (id: string) => `${Api_Base_Url}api/goals/${id}`,
+  contribute: (id: string) => `${Api_Base_Url}api/goals/${id}/contribute`,
+  status: (id: string) => `${Api_Base_Url}api/goals/${id}/status`,
+};
+
+export const DashboardApiConfig = {
+  summary: `${Api_Base_Url}api/dashboard/summary`,
+  monthlyTrend: `${Api_Base_Url}api/dashboard/monthly-trend`,
+  categoryBreakdown: `${Api_Base_Url}api/dashboard/category-breakdown`,
+  recentActivity: `${Api_Base_Url}api/dashboard/recent-activity`,
+};

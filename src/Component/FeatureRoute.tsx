@@ -4,26 +4,15 @@ import { useFeature } from "../hooks/useFeature";
 import { useSubscription } from "../context/SubscriptionContext";
 
 interface FeatureRouteProps {
-  /** The feature key required to access this route */
+
   feature: string;
-  /** Where to redirect if the user lacks the feature (default: "/plans") */
+ 
   redirectTo?: string;
-  /** Optional children — if not provided, renders <Outlet /> for nested routes */
+ 
   children?: React.ReactNode;
 }
 
-/**
- * A route-level feature gate. Wraps a route to enforce feature access.
- * Redirects unauthenticated or feature-lacking users to the plans/upgrade page.
- *
- * @example
- * ```tsx
- * // In App.tsx route config:
- * <Route element={<FeatureRoute feature="advanced_analytics" />}>
- *   <Route path="/analytics-pro" element={<AdvancedAnalytics />} />
- * </Route>
- * ```
- */
+
 const FeatureRoute: React.FC<FeatureRouteProps> = ({
   feature,
   redirectTo = "/plans",
