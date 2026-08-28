@@ -32,6 +32,7 @@ import Onboarding from "./pages/Onboarding/Onboarding";
 import PlanManagement from "./pages/admin/PlanManagement";
 import FeatureManagement from "./pages/admin/FeatureManagement";
 import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
+import AdminUserManagement from "./pages/admin/AdminUserManagement";
 import BudgetPlanning from "./pages/finance/BudgetPlanning";
 import PortfolioManagement from "./pages/finance/PortfolioManagement";
 import TaxReports from "./pages/finance/TaxReports";
@@ -92,37 +93,74 @@ function App() {
             <Route path="/profile" element={<Profile></Profile>}/>
             
 
-            {/* Analytics — requires 'analytics' feature (Basic+) */}
-            <Route element={<FeatureRoute feature="analytics" />}>
-              <Route path="/analytics" element={<Analytics/>}/>
-            </Route>
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout />}>
+              {/* Free plan features — always accessible */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/myaccount" element={<MyAccount />} />
+              <Route path="/plans" element={<Plans></Plans>} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/main" element={<Main></Main>} />
+              <Route path="/manage-accounts" element={<ManageAccounts />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/profile" element={<Profile></Profile>} />
 
-            {/* Investment Monitoring — requires 'investment_tracking' feature (Basic+) */}
-            <Route element={<FeatureRoute feature="investment_tracking" />}>
-              <Route path="/investment-monitoring" element={<Investment />} />
-            </Route>
+              {/* Analytics — requires 'analytics' feature (Basic+) */}
+              <Route element={<FeatureRoute feature="analytics" />}>
+                <Route path="/analytics" element={<Analytics />} />
+              </Route>
 
-            {/* Cards — requires 'cards' feature (Basic+) */}
-            <Route element={<FeatureRoute feature="cards" />}>
-              <Route path="/cards" element={<Cards />}/>
-            </Route>
+              {/* Investment Monitoring — requires 'investment_tracking' feature (Basic+) */}
+              <Route element={<FeatureRoute feature="investment_tracking" />}>
+                <Route path="/investment-monitoring" element={<Investment />} />
+              </Route>
 
+              {/* Cards — requires 'cards' feature (Basic+) */}
+              <Route element={<FeatureRoute feature="cards" />}>
+                <Route path="/cards" element={<Cards />} />
+              </Route>
             {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
             <Route path="/goals" element={<Goals />} />
 
-            {/* Reports — requires 'reports' feature (Advanced+) */}
-            <Route element={<FeatureRoute feature="reports" />}>
-              <Route path="/reports-analytics" element={<Report/>} />
-              <Route path="/report-generation" element={<Report />} />
-            </Route>
+              {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
+              <Route path="/transaction" element={<Transaction />} />
+              <Route
+                path="/transaction-details"
+                element={<TransactionDetails />}
+              />
 
-            {/* User Management — requires 'user_management' feature (Pro) */}
-            <Route element={<FeatureRoute feature="user_management" />}>
-              <Route path="/user-management" element={<UserManagement />}/>
-            </Route>
+              {/* Reports — requires 'reports' feature (Advanced+) */}
+              <Route element={<FeatureRoute feature="reports" />}>
+                <Route path="/reports-analytics" element={<Report />} />
+                <Route path="/report-generation" element={<Report />} />
+              </Route>
 
+              {/* User Management — requires 'user_management' feature (Pro) */}
+              <Route element={<FeatureRoute feature="user_management" />}>
+                <Route path="/user-management" element={<UserManagement />} />
+              </Route>
+
+              {/* Admin Routes (role-gated internally) */}
+              <Route path="/admin/plans" element={<PlanManagement />} />
+              <Route path="/admin/features" element={<FeatureManagement />} />
+              <Route
+                path="/admin/subscriptions"
+                element={<SubscriptionDashboard />}
+              />
+              <Route
+                path="/admin/users"
+                element={<AdminUserManagement />}
+              />
+            </Route>
             {/* Budget Planning — requires 'budget_planning' feature (Advanced+) */}
             <Route element={<FeatureRoute feature="budget_planning" />}>
               <Route path="/budget-planning" element={<BudgetPlanning />} />
@@ -148,17 +186,16 @@ function App() {
             <Route path="/admin/features" element={<FeatureManagement />} />
             <Route path="/admin/subscriptions" element={<SubscriptionDashboard />} />
           </Route>
-        </Route>
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to={authState.isAuthenticated ? "/dashboard" : "/"}
-              replace
-            />
-          }
-        />
-      </Routes>
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to={authState.isAuthenticated ? "/dashboard" : "/"}
+                replace
+              />
+            }
+          />
+        </Routes>
       </SubscriptionProvider>
     </>
   );

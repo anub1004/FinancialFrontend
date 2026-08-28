@@ -22,8 +22,9 @@ export const TourButton: React.FC<TourButtonProps> = ({
     restartTour(tourName);
   };
 
-  const baseStyles = "inline-flex items-center justify-center transition-all duration-200 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed";
-  
+  const baseStyles =
+    "inline-flex items-center justify-center transition-all duration-200 focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed";
+
   if (variant === "icon") {
     return (
       <button
