@@ -30,7 +30,9 @@ import Transaction from "./pages/finance/Transaction";
 import TransactionDetails from "./pages/finance/Transactiondetail";
 import Goals from "./pages/finance/Goals";
 import Onboarding from "./pages/Onboarding/Onboarding";
-import AdminHub from "./pages/admin/AdminHub";
+import PlanManagement from "./pages/admin/PlanManagement";
+import FeatureManagement from "./pages/admin/FeatureManagement";
+import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
 import BudgetPlanning from "./pages/finance/BudgetPlanning";
 import PortfolioManagement from "./pages/finance/PortfolioManagement";
 import TaxReports from "./pages/finance/TaxReports";
@@ -114,40 +116,45 @@ function App() {
             <Route path="/profile" element={<Profile></Profile>}/>
             
 
-            {/* Analytics � requires 'analytics' feature (Basic+) */}
+            {/* Analytics — requires 'analytics' feature (Basic+) */}
             <Route element={<FeatureRoute feature="analytics" />}>
               <Route path="/analytics" element={<Analytics/>}/>
             </Route>
 
-            {/* Investment Monitoring  requires 'investment_tracking' feature (Basic+) */}
+            {/* Investment Monitoring — requires 'investment_tracking' feature (Basic+) */}
             <Route element={<FeatureRoute feature="investment_tracking" />}>
               <Route path="/investment-monitoring" element={<Investment />} />
             </Route>
 
-            {/* Cards � requires 'cards' feature (Basic+) */}
+            {/* Cards — requires 'cards' feature (Basic+) */}
             <Route element={<FeatureRoute feature="cards" />}>
               <Route path="/cards" element={<Cards />}/>
             </Route>
 
-            {/* Transactions (Finance) � requires 'transactions' feature (Free+) */}
+            {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
             <Route path="/transaction" element={<Transaction />}/>
             <Route path="/transaction-details" element={<TransactionDetails />} />
             <Route path="/goals" element={<Goals />} />
 
-            {/* Reports � requires 'reports' feature (Advanced+) */}
+              {/* Transactions (Finance) — requires 'transactions' feature (Free+) */}
+              <Route path="/transaction" element={<Transaction />} />
+              <Route
+                path="/transaction-details"
+                element={<TransactionDetails />}
+              />
+
+            {/* Reports — requires 'reports' feature (Advanced+) */}
             <Route element={<FeatureRoute feature="reports" />}>
               <Route path="/reports-analytics" element={<Report/>} />
               <Route path="/report-generation" element={<Report />} />
-              <Route path="/report" element={<Report />} />
             </Route>
 
-            {/* User Management � requires 'user_management' feature (Pro) */}
+            {/* User Management — requires 'user_management' feature (Pro) */}
             <Route element={<FeatureRoute feature="user_management" />}>
               <Route path="/user-management" element={<UserManagement />}/>
             </Route>
-           
 
-            {/* Budget Planning � requires 'budget_planning' feature (Advanced+) */}
+            {/* Budget Planning — requires 'budget_planning' feature (Advanced+) */}
             <Route element={<FeatureRoute feature="budget_planning" />}>
               <Route path="/budget-planning" element={<BudgetPlanning />} />
             </Route>
@@ -167,15 +174,10 @@ function App() {
               <Route path="/audit-log" element={<AuditLogViewer />} />
             </Route>
 
-            {/* Admin Hub — single page with all admin tabs */}
-            <Route path="/admin" element={<AdminHub />} />
-            {/* Legacy admin sub-routes still redirect/render the hub */}
-            <Route path="/admin/users" element={<AdminHub />} />
-            <Route path="/user-management" element={<AdminHub />} />
-            <Route path="/admin/plans" element={<AdminHub />} />
-            <Route path="/admin/features" element={<AdminHub />} />
-            <Route path="/admin/subscriptions" element={<AdminHub />} />
-            <Route path="/admin/notifications" element={<AdminHub />} />
+            {/* Admin Routes (role-gated internally) */}
+            <Route path="/admin/plans" element={<PlanManagement />} />
+            <Route path="/admin/features" element={<FeatureManagement />} />
+            <Route path="/admin/subscriptions" element={<SubscriptionDashboard />} />
           </Route>
         </Route>
         <Route
