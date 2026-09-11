@@ -67,3 +67,34 @@ export const DashboardApiConfig = {
   categoryBreakdown: `${Api_Base_Url}api/dashboard/category-breakdown`,
   recentActivity: `${Api_Base_Url}api/dashboard/recent-activity`,
 };
+
+// ── Portfolio Management API Endpoints ──────────────────────────────────
+export const PortfolioApiConfig = {
+  list: `${Api_Base_Url}api/portfolio`,
+  summary: `${Api_Base_Url}api/portfolio/summary`,
+  byId: (id: string) => `${Api_Base_Url}api/portfolio/${id}`,
+};
+
+// ── Tax Reports API Endpoints ───────────────────────────────────────────
+export const TaxApiConfig = {
+  list: (fy: string = "2025-26") => `${Api_Base_Url}api/tax?fy=${fy}`,
+  byId: (id: string) => `${Api_Base_Url}api/tax/${id}`,
+  compute: (fy: string = "2025-26") => `${Api_Base_Url}api/tax/compute?fy=${fy}`,
+  report: (fy: string = "2025-26") => `${Api_Base_Url}api/tax/report?fy=${fy}`,
+  create: `${Api_Base_Url}api/tax`,
+};
+
+// -- Notification API Endpoints ----------------------------------------------
+export const NotificationApiConfig = {
+  list: (page: number = 1, pageSize: number = 20, onlyUnread?: boolean) =>
+    `${Api_Base_Url}api/notification?page=${page}&pageSize=${pageSize}${onlyUnread != null ? `&onlyUnread=${onlyUnread}` : ''}`,
+  unreadCount: `${Api_Base_Url}api/notification/unread-count`,
+  markRead: (id: string) => `${Api_Base_Url}api/notification/${id}/read`,
+  markAllRead: `${Api_Base_Url}api/notification/read-all`,
+};
+
+export const NotificationAdminApiConfig = {
+  broadcast: `${Api_Base_Url}api/notificationadmin/broadcast`,
+  history: (page: number = 1, pageSize: number = 20) =>
+    `${Api_Base_Url}api/notificationadmin/history?page=${page}&pageSize=${pageSize}`,
+};

@@ -77,7 +77,7 @@ function Investment() {
     try {
       const res = await fetch(`${ApiConfig.Api_Base_Url}api/investments/summary`, { credentials: "include", headers });
       if (res.ok) setSummary(await res.json());
-    } catch { /* ignore */ }
+    } catch {  }
   }, []);
 
   useEffect(() => { fetchInvestments(); fetchSummary(); }, [page, filterType, filterStatus]);
@@ -306,8 +306,8 @@ function Investment() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm scroll-y-auto p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">{editingId ? "Edit Investment" : "Add Investment"}</h3>
               <button onClick={() => { setShowModal(false); resetForm(); }} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><X className="w-5 h-5" /></button>

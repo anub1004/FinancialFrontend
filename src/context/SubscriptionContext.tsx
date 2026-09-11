@@ -10,12 +10,8 @@ import React, {
 import { useAuth } from "./AuthContext";
 import { ApiConfig } from "../config/apiconfig";
 
-// ─────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────
-
 export interface SubscriptionState {
-  /** Plan ID (GUID string) or null if no active subscription */
+
   planId: string | null;
   /** URL-friendly plan slug (e.g. "pro", "basic") */
   planSlug: string | null;
@@ -35,26 +31,20 @@ export interface SubscriptionState {
 
 export interface SubscriptionContextType {
   subscription: SubscriptionState;
-  /** Check if the current user has a specific feature */
+
   hasFeature: (featureKey: string) => boolean;
-  /** Manually refresh features (e.g. after plan change) */
+
   refreshFeatures: () => Promise<void>;
 }
 
-// ─────────────────────────────────────────────────────────────────────
-// Context
-// ─────────────────────────────────────────────────────────────────────
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(
   undefined,
 );
 
 const EMPTY_SET = new Set<string>();
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; 
 
-// ─────────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────────
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -151,13 +141,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [authState.isAuthenticated, authState.planId, authState.planSlug, authState.planName, authState.subscriptionStatus]);
 
-  // ── Load on mount & when auth/plan changes ─────────────────────────
+
 
   useEffect(() => {
     refreshFeatures();
   }, [refreshFeatures]);
 
-  // ── Auto-refresh every 5 minutes while authenticated ───────────────
+  // Auto-refresh every 5 minutes 
 
   useEffect(() => {
     if (authState.isAuthenticated) {
@@ -172,7 +162,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [authState.isAuthenticated, refreshFeatures]);
 
-  // ── O(1) feature check ─────────────────────────────────────────────
+
 
   const hasFeature = useCallback(
     (featureKey: string): boolean => {
@@ -180,8 +170,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [subscription.features],
   );
-
-  // ── Memoized context value ─────────────────────────────────────────
 
   const value = useMemo(
     () => ({ subscription, hasFeature, refreshFeatures }),
@@ -195,9 +183,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────
-// Hook
-// ─────────────────────────────────────────────────────────────────────
+
 
 export const useSubscription = (): SubscriptionContextType => {
   const context = useContext(SubscriptionContext);

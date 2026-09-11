@@ -24,11 +24,11 @@ function Login() {
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp">("signIn");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Credentials input refs
+ 
   const email = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
 
-  // TOTP state variables
+  
   const [totpRequired, setTotpRequired] = useState(false);
   const [totpSetupRequired, setTotpSetupRequired] = useState(false);
   const [qrCodeBase64, setQrCodeBase64] = useState("");
@@ -357,7 +357,7 @@ function Login() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setTotpRequired(false)}
+                  onClick={() => { setTotpRequired(false); setTotpSetupRequired(false); setTotpCode(""); setQrCodeBase64(""); setManualEntryKey(""); setTotpSessionToken(""); }}
                   className="mx-auto mt-2 flex items-center justify-center gap-2 bg-transparent border-0 text-sm text-slate-500 hover:text-slate-700 cursor-pointer transition-colors"
                 >
                   <ArrowLeft size={14} />
@@ -484,12 +484,16 @@ function Login() {
                         ref={password}
                         required
                       />
-                      <span
-                        className={styles.passwordToggle}
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </span>
+                     <span
+  className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-600 hover:text-gray-900"
+  onClick={() => setShowPassword((prev) => !prev)}
+>
+  {showPassword ? (
+    <EyeOff size={18} strokeWidth={2} />
+  ) : (
+    <Eye size={18} strokeWidth={2} />
+  )}
+</span>
                     </div>
                   </span>
                 </label>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
+import AdminNavbar from "./AdminNavbar";
 
 interface Feature {
   id: string;
@@ -24,7 +25,7 @@ const emptyFeature = {
   isActive: true,
 };
 
-export default function FeatureManagement() {
+export default function FeatureManagement({ embedded = false }: { embedded?: boolean } = {}) {
   const { authState } = useAuth();
   const [features, setFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +44,7 @@ export default function FeatureManagement() {
     try {
       const res = await fetch(ApiConfig.Api_Base_Url + "api/admin/features", { credentials: "include", headers });
       if (res.ok) setFeatures(await res.json());
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch {  } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchFeatures(); }, []);
@@ -136,7 +137,10 @@ export default function FeatureManagement() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Admin Navigation ── */}
+      {!embedded && <AdminNavbar />}
+
+  
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -157,7 +161,7 @@ export default function FeatureManagement() {
                     <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{f.featureKey}</code>
                   </td>
                   <td className="px-5 py-3 font-medium text-gray-800 dark:text-gray-100">{f.displayName}</td>
-                  <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{f.category || "—"}</td>
+                  <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{f.category || "â€”"}</td>
                   <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{f.sortOrder}</td>
                   <td className="px-5 py-3">
                     <button onClick={() => toggleFeature(f.id)} className={`px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer transition-colors ${f.isActive
@@ -185,7 +189,7 @@ export default function FeatureManagement() {
         </div>
       </div>
 
-      {/* ── Create/Edit Modal ─────────────────────────────────────── */}
+     
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4">
@@ -241,3 +245,4 @@ export default function FeatureManagement() {
     </div>
   );
 }
+

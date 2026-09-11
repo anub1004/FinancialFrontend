@@ -45,7 +45,7 @@ export interface TourStep extends Step {
 export const appTourSteps: TourStep[] = [
   {
     target: '[data-tour="sidebar"]',
-    title: "Sidebar Navigation 🧭",
+    title: "Sidebar Navigation ",
     content:
       "This is your command center. You can toggle pages and expand lists from here.",
     placement: "right",
@@ -54,7 +54,7 @@ export const appTourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="onboarding-nav-link"]',
-    title: "Structured Onboarding Steps 🪜",
+    title: "Structured Onboarding Steps ",
     content:
       "You are currently viewing Step 2 of the Onboarding setup. Expand these items to complete configuration tasks.",
     placement: "right",
@@ -81,7 +81,7 @@ export const appTourSteps: TourStep[] = [
   },
   {
     target: '[data-tour="dashboard-header"]',
-    title: "Dashboard Home 🏠",
+    title: "Dashboard Home ",
     content:
       "Welcome to your core dashboard view, which provides a detailed breakdown of your portfolio.",
     placement: "bottom",

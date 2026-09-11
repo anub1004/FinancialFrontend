@@ -44,7 +44,7 @@ interface CategoryItem {
 const PAYMENT_METHODS = ["Cash", "UPI", "Card", "NetBanking", "Wallet", "Cheque"];
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "SGD"];
 
-// Helper: normalize enum value to "Income" or "Expense" regardless of API format (string or int)
+
 const isIncome = (type: number | string): boolean => {
   if (typeof type === "string") return type === "Income" || type === "1";
   return type === 1;
@@ -61,13 +61,13 @@ function Transaction() {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
 
-  // Filters
+
   const [filterCategory, setFilterCategory] = useState("");
   const [filterType, setFilterType] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Modal state
+
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -124,7 +124,7 @@ function Transaction() {
         { credentials: "include", headers }
       );
       if (res.ok) setSummary(await res.json());
-    } catch { /* ignore */ }
+    } catch {  }
   }, []);
 
   const fetchCategories = useCallback(async () => {
@@ -134,7 +134,7 @@ function Transaction() {
         { credentials: "include", headers }
       );
       if (res.ok) setCategories(await res.json());
-    } catch { /* ignore */ }
+    } catch {  }
   }, []);
 
   useEffect(() => { fetchCategories(); }, []);
@@ -182,7 +182,7 @@ function Transaction() {
         ? `${ApiConfig.Api_Base_Url}api/transactions/${editingId}`
         : `${ApiConfig.Api_Base_Url}api/transactions`;
 
-      // Send enum as string ("Income"/"Expense") to match backend JsonStringEnumConverter
+     
       const body = {
         amount: parseFloat(formData.amount),
         category: formData.category,
@@ -510,7 +510,7 @@ function Transaction() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                 {editingId ? "Edit Transaction" : "Add Transaction"}

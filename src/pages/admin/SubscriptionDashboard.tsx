@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import AdminNavbar from "./AdminNavbar";
 import { useAuth } from "../../context/AuthContext";
 import { ApiConfig } from "../../config/apiconfig";
 
@@ -36,7 +37,7 @@ interface PageResult {
   items: Subscription[];
 }
 
-export default function SubscriptionDashboard() {
+export default function SubscriptionDashboard({ embedded = false }: { embedded?: boolean } = {}) {
   const { authState } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [subs, setSubs] = useState<PageResult | null>(null);
@@ -92,7 +93,9 @@ export default function SubscriptionDashboard() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Overview of all user subscriptions</p>
       </div>
 
-      {/* Stat Cards */}
+      {!embedded && <AdminNavbar />}
+
+     
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {statCards.map((s) => (
           <div key={s.label} className={`rounded-xl ${s.bg} p-4 text-center border border-gray-100 dark:border-gray-700`}>
@@ -102,7 +105,7 @@ export default function SubscriptionDashboard() {
         ))}
       </div>
 
-      {/* Plan breakdown */}
+     
       {stats && stats.subscriptionsByPlan.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-8">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wider">Active Subscriptions by Plan</h2>
@@ -117,7 +120,7 @@ export default function SubscriptionDashboard() {
         </div>
       )}
 
-      {/* Subscriptions Table */}
+     
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">All Subscriptions</h2>
@@ -158,7 +161,7 @@ export default function SubscriptionDashboard() {
                   <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{s.billingCycle}</td>
                   <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{new Date(s.startDate).toLocaleDateString()}</td>
                   <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{new Date(s.endDate).toLocaleDateString()}</td>
-                  <td className="px-5 py-3">{s.autoRenew ? "✓" : "—"}</td>
+                  <td className="px-5 py-3">{s.autoRenew ? "âœ“" : "â€”"}</td>
                 </tr>
               ))}
               {(!subs || subs.items.length === 0) && (
@@ -168,13 +171,13 @@ export default function SubscriptionDashboard() {
           </table>
         </div>
 
-        {/* Pagination */}
+     
         {subs && subs.totalPages > 1 && (
           <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <span className="text-xs text-gray-400">Page {subs.page} of {subs.totalPages} ({subs.total} total)</span>
             <div className="flex gap-2">
-              <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-3 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-40">← Prev</button>
-              <button disabled={page >= subs.totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-40">Next →</button>
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-3 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-40">â† Prev</button>
+              <button disabled={page >= subs.totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg disabled:opacity-40">Next â†’</button>
             </div>
           </div>
         )}
@@ -182,3 +185,6 @@ export default function SubscriptionDashboard() {
     </div>
   );
 }
+
+
+

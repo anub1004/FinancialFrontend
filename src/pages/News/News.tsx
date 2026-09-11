@@ -24,11 +24,11 @@ function FinanceNewsSection() {
     try {
       const url = `${DatabaseFinanceNewsConfig.url}${DatabaseFinanceNewsConfig.url.includes("?") ? "&" : "?"}page=${page}&pageSize=${pageSize}`;
       const res = await fetch(url);
-      console.log(res); // Debugging line
+     
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const body = await res.json();
-      console.log("Finance News Response:", body); // Debugging line
+     
       const raw: any[] = body?.items ?? [];
       if (raw.length === 0 && page === 1) throw new Error("No articles found");
 

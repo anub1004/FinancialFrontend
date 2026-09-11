@@ -1,9 +1,5 @@
-function Usermanagement() {
-  return (
-    <div>
-      <h1>User Management</h1>
-      {/* Add your user management components and logic here */}
-    </div>
-  );
+import AdminUserManagement from "../admin/AdminUserManagement";
+
+export default function Usermanagement() {
+  return <AdminUserManagement />;
 }
-export default Usermanagement;

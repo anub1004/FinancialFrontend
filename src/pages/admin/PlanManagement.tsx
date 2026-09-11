@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
+import AdminNavbar from "./AdminNavbar";
 
 interface Feature {
   id: string;
@@ -42,7 +43,7 @@ const emptyPlan = {
   maxUsers: undefined as number | undefined,
 };
 
-export default function PlanManagement() {
+export default function PlanManagement({ embedded = false }: { embedded?: boolean } = {}) {
   const { authState } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -61,7 +62,7 @@ export default function PlanManagement() {
     Authorization: token ? `Bearer ${token}` : "",
   };
 
-  // ── Fetch ────────────────────────────────────────────────────────
+  // Fetch 
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -81,7 +82,7 @@ export default function PlanManagement() {
     Promise.all([fetchPlans(), fetchFeatures()]).finally(() => setLoading(false));
   }, []);
 
-  // ── Create / Update ──────────────────────────────────────────────
+  // Create , Update
 
   const openCreate = () => {
     setEditingPlan(null);
@@ -144,7 +145,7 @@ export default function PlanManagement() {
     }
   };
 
-  // ── Delete ───────────────────────────────────────────────────────
+  
 
   const deletePlan = async (id: string) => {
     if (!confirm("Are you sure? This will soft-delete the plan.")) return;
@@ -156,7 +157,7 @@ export default function PlanManagement() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // ── Feature assignment ───────────────────────────────────────────
+  // Feature assignment
 
   const assignFeature = async (planId: string, featureId: string) => {
     try {
@@ -181,7 +182,7 @@ export default function PlanManagement() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // ── Pricing ──────────────────────────────────────────────────────
+
 
   const openPricing = (p: Plan) => {
     setPricingPlanId(p.id);
@@ -203,7 +204,7 @@ export default function PlanManagement() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // ── Guard ────────────────────────────────────────────────────────
+  
 
   if (authState.role !== "Admin") return <div className="p-8 text-center text-red-500 font-semibold">Admin access required</div>;
 
@@ -213,7 +214,7 @@ export default function PlanManagement() {
     </div>
   );
 
-  // ── Render ───────────────────────────────────────────────────────
+  
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
@@ -228,7 +229,7 @@ export default function PlanManagement() {
         </button>
       </div>
 
-      {/* Plans Grid */}
+     
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {plans.map((p) => (
           <div key={p.id} className={`bg-white dark:bg-gray-800 rounded-xl border ${p.isActive ? "border-gray-200 dark:border-gray-700" : "border-red-200 dark:border-red-800 opacity-70"} shadow-sm overflow-hidden`}>
@@ -245,6 +246,9 @@ export default function PlanManagement() {
                   </span>
                 </div>
               </div>
+
+      {/* ── Admin Navigation ── */}
+      {!embedded && <AdminNavbar />}
 
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">{p.description || "No description"}</p>
 
@@ -264,7 +268,7 @@ export default function PlanManagement() {
                   {p.features.map((f) => (
                     <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">
                       {f.displayName}
-                      <button onClick={() => removeFeature(p.id, f.id)} className="ml-0.5 text-violet-400 hover:text-red-500" title="Remove">×</button>
+                      <button onClick={() => removeFeature(p.id, f.id)} className="ml-0.5 text-violet-400 hover:text-red-500" title="Remove">Ã—</button>
                     </span>
                   ))}
                   {p.features.length === 0 && <span className="text-xs text-gray-400 italic">No features assigned</span>}
@@ -285,7 +289,7 @@ export default function PlanManagement() {
                 </select>
               </div>
 
-              {/* Meta */}
+         
               <div className="flex items-center gap-3 text-xs text-gray-400">
                 <span>Order: {p.sortOrder}</span>
                 <span>Trial: {p.trialDays}d</span>
@@ -312,7 +316,6 @@ export default function PlanManagement() {
         </div>
       )}
 
-      {/* ── Create/Edit Modal ─────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
@@ -385,7 +388,7 @@ export default function PlanManagement() {
         </div>
       )}
 
-      {/* ── Pricing Modal ─────────────────────────────────────────── */}
+      
       {showPricingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
@@ -412,3 +415,4 @@ export default function PlanManagement() {
     </div>
   );
 }
+

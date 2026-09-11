@@ -38,7 +38,7 @@ function AuditLogViewer() {
   const token = localStorage.getItem("token");
   const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" };
 
-  // Sample data for scaffold
+  
   const SAMPLE_LOGS: AuditEntry[] = [
     { auditLogId: 1, userId: "user-1", action: "Login", category: "Authentication", details: "Successful login via email/password", ipAddress: "192.168.1.1", timestamp: new Date(Date.now() - 3600000).toISOString() },
     { auditLogId: 2, userId: "user-1", action: "ProfileUpdate", category: "Account", details: "Updated profile picture and display name", ipAddress: "192.168.1.1", timestamp: new Date(Date.now() - 7200000).toISOString() },
@@ -52,7 +52,7 @@ function AuditLogViewer() {
 
   useEffect(() => {
     setLoading(true);
-    // Simulate API call with sample data
+    
     setTimeout(() => {
       let filtered = SAMPLE_LOGS;
       if (searchQuery) filtered = filtered.filter(l => l.action.toLowerCase().includes(searchQuery.toLowerCase()) || l.details.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -94,7 +94,7 @@ function AuditLogViewer() {
         </div>
       </div>
 
-      {/* Audit Log Table */}
+      
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Activity Log</h2>

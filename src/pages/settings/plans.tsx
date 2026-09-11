@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSubscription } from "../../context/SubscriptionContext";
 import { ApiConfig } from "../../config/apiconfig";
+import SettingsNav from "./SettingsNav";
 import toast from "react-hot-toast";
 
 interface PlanFeature {
@@ -383,11 +384,12 @@ export default function Plans() {
     <div
       className="
         mx-auto w-full max-w-7xl
-        px-4 py-10
+        px-4 py-8
         sm:px-6
         lg:px-8
       "
     >
+      <SettingsNav />
 
       {/* =====================================================
           CANCELLED SUBSCRIPTION

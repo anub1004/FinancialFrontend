@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { NavLink } from "react-router-dom";
 import { useSubscription } from "../../context/SubscriptionContext";
 import { ApiConfig } from "../../config/apiconfig";
+import SettingsNav from "./SettingsNav";
 import toast from "react-hot-toast";
 
 interface CurrentSub {
@@ -33,9 +34,10 @@ export default function Billing() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  
 
   const token = localStorage.getItem("token");
-  const headers: Record<string, string> = {
+  const headers: Record<string, string> = { 
     "Content-Type": "application/json",
     Authorization: token ? `Bearer ${token}` : "",
   };
@@ -48,7 +50,7 @@ export default function Billing() {
       ]);
       if (subRes.ok) setCurrent(await subRes.json());
       if (histRes.ok) setHistory(await histRes.json());
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch { } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, []);
@@ -102,11 +104,13 @@ export default function Billing() {
   );
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-4xl mx-auto">
-      <div className="mb-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
+      <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">Billing & Subscription</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your subscription and view billing history</p>
       </div>
+
+      <SettingsNav />
 
       {/* Cancel-until-deadline banner */}
       {current && current.statusName === "Cancelled" && new Date(current.endDate) > new Date() && (

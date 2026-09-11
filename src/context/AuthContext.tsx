@@ -60,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkAuth = async () => {
     try {
       console.log("Checking authentication status...");
+      setAuthState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
 
       const response = await fetch(
@@ -112,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("Auth check error:", error);
+      toast.error("Unable to connect to server. Please check your connection.");
       setAuthState({
         user: null,
         role: null,
@@ -128,8 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     try {
-      setAuthState((prev) => ({ ...prev, loading: true }));
-      const response = await fetch(ApiConfig.Api_Base_Url + "api/Auth/login", {
+            const response = await fetch(ApiConfig.Api_Base_Url + "api/Auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -144,23 +145,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           localStorage.setItem("refreshtoken", data.refreshtoken);
           await checkAuth();
         } else {
-          setAuthState((prev) => ({ ...prev, loading: false }));
         }
         return data;
       } else {
-        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error(data.message || "Login failed");
       }
     } catch (error: any) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
       throw new Error(error.message || "Login failed");
     }
   };
 
   const googleLogin = async (idToken: string) => {
     try {
-      setAuthState((prev) => ({ ...prev, loading: true }));
-      const response = await fetch(
+            const response = await fetch(
         ApiConfig.Api_Base_Url + "api/Auth/google-login",
         {
           method: "POST",
@@ -179,15 +176,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           localStorage.setItem("refreshtoken", data.refreshtoken);
           await checkAuth();
         } else {
-          setAuthState((prev) => ({ ...prev, loading: false }));
         }
         return data;
       } else {
-        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error(data.message || "Google Login failed");
       }
     } catch (error: any) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
       throw new Error(error.message || "Google Login failed");
     }
   };
@@ -198,8 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     totpSessionToken: string,
   ) => {
     try {
-      setAuthState((prev) => ({ ...prev, loading: true }));
-      const response = await fetch(
+            const response = await fetch(
         ApiConfig.Api_Base_Url + "api/Auth/verify-totp",
         {
           method: "POST",
@@ -213,7 +206,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const data = await response.json();
       if (response.ok) {
         if (data.recoveryCodes && data.recoveryCodes.length > 0) {
-          setAuthState((prev) => ({ ...prev, loading: false }));
           return data;
         }
         if (data.token) {
@@ -223,11 +215,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         await checkAuth();
         return data;
       } else {
-        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error(data.message || "Verification failed");
       }
     } catch (error: any) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
       throw new Error(error.message || "Verification failed");
     }
   };
@@ -238,8 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     recoveryCode: string,
   ) => {
     try {
-      setAuthState((prev) => ({ ...prev, loading: true }));
-      const response = await fetch(
+            const response = await fetch(
         ApiConfig.Api_Base_Url + "api/Auth/recovery-login",
         {
           method: "POST",
@@ -250,7 +239,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       const data = await response.json();
       if (!response.ok) {
-        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error(data.message || "Recovery-code login failed");
       }
       localStorage.setItem("token", data.token);
@@ -258,7 +246,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       await checkAuth();
       return data;
     } catch (error: any) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
       throw new Error(error.message || "Recovery-code login failed");
     }
   };
@@ -336,6 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       toast.success(responseData.message || "Logged out successfully");
       console.log("Logout response data:", responseData);
       localStorage.removeItem("token");
+      localStorage.removeItem("refreshtoken");
       setAuthState({
         user: null,
         role: null,
@@ -358,6 +346,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error: any) {
       console.error("Logout error:", error);
       localStorage.removeItem("token");
+      localStorage.removeItem("refreshtoken");
       setAuthState({
         user: null,
         role: null,

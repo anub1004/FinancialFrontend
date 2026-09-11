@@ -1,8 +1,5 @@
-function Profile() {
-  return (
-    <div>
-      <h1>Profile</h1>
-    </div>
-  );
+import Settings from "../settings/Settings";
+
+export default function Profile() {
+  return <Settings />;
 }
-export default Profile;

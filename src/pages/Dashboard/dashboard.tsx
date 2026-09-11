@@ -19,7 +19,7 @@ Chart.register(
   Tooltip, Legend, Filler,
 );
 
-// ── Types ─────────────────────────────────────────────────────────────
+
 interface DashboardSummary {
   totalIncome: number;
   totalExpense: number;
@@ -67,7 +67,7 @@ interface RecentActivity {
   isPositive: boolean;
 }
 
-// ── Chart Colors ──────────────────────────────────────────────────────
+
 const CHART_COLORS = [
   "#8b5cf6", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444",
   "#ec4899", "#14b8a6", "#6366f1", "#84cc16", "#f97316",
@@ -105,12 +105,12 @@ function Dashboard() {
       if (trendRes.ok) setTrends(await trendRes.json());
       if (catRes.ok) setCategories(await catRes.json());
       if (actRes.ok) setActivities(await actRes.json());
-    } catch { /* silently fail */ } finally { setLoading(false); }
+    } catch { } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchDashboard(); }, []);
 
-  // ── Monthly Trend Chart (Bar) ──────────────────────────────────────
+  
   useEffect(() => {
     if (!trendChartRef.current || trends.length === 0) return;
     if (trendChartInstance.current) trendChartInstance.current.destroy();
@@ -163,7 +163,7 @@ function Dashboard() {
     return () => { trendChartInstance.current?.destroy(); };
   }, [trends]);
 
-  // ── Category Breakdown Chart (Doughnut) ────────────────────────────
+
   useEffect(() => {
     if (!catChartRef.current || categories.length === 0) return;
     if (catChartInstance.current) catChartInstance.current.destroy();
@@ -239,7 +239,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ── Summary Cards ── */}
+    
       <div data-tour="dashboard-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <SummaryCard icon={<TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />} iconBg="bg-emerald-100 dark:bg-emerald-900/30" label="Income" value={fmt(summary?.totalIncome ?? 0, summary?.currency)} valueColor="text-emerald-600 dark:text-emerald-400" />
         <SummaryCard icon={<TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />} iconBg="bg-red-100 dark:bg-red-900/30" label="Expenses" value={fmt(summary?.totalExpense ?? 0, summary?.currency)} valueColor="text-red-600 dark:text-red-400" />
@@ -257,7 +257,7 @@ function Dashboard() {
         </FeatureGate>
       </div>
 
-      {/* ── Goals Quick Stats ── */}
+     
       {(summary?.activeGoals ?? 0) > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
@@ -295,9 +295,9 @@ function Dashboard() {
         </div>
       )}
 
-      {/* ── Charts Row ── */}
+   
       <div className="grid grid-cols-12 gap-6 mb-8">
-        {/* Monthly Income vs Expense Chart */}
+      
         <div className="col-span-12 lg:col-span-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Income vs Expenses</h2>
@@ -315,7 +315,7 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Category Breakdown Doughnut */}
+     
         <div className="col-span-12 lg:col-span-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Spending by Category</h2>
@@ -349,7 +349,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recent Activity Feed ── */}
+      
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Recent Activity</h2>
@@ -396,7 +396,6 @@ function Dashboard() {
         )}
       </div>
 
-      {/* ── Quick Actions ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <QuickAction to="/transaction" icon={<Wallet className="w-5 h-5" />} title="Transactions" desc="Track income & expenses" color="violet" />
         <FeatureGate feature="investment_tracking" fallback={
@@ -410,7 +409,7 @@ function Dashboard() {
   );
 }
 
-// ── Reusable Sub-Components ──────────────────────────────────────────
+
 
 function SummaryCard({ icon, iconBg, label, value, valueColor, subtext, subtextColor }: {
   icon: React.ReactNode; iconBg: string; label: string; value: string; valueColor?: string;

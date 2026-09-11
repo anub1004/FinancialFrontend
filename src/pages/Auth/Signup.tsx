@@ -16,7 +16,6 @@ function Signup() {
   const password = useRef<HTMLInputElement>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Plan selection state
   interface SignupPlan {
     id: string;
     name: string;
@@ -34,7 +33,6 @@ function Signup() {
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<{ username: string; email: string; password: string } | null>(null);
 
-  // TOTP state
   const [totpData, setTotpData] = useState<{
     active: boolean; setupRequired: boolean; qr: string; key: string; session: string; email: string;
   }>({ active: false, setupRequired: false, qr: "", key: "", session: "", email: "" });
@@ -43,7 +41,6 @@ function Signup() {
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [tempAuthTokens, setTempAuthTokens] = useState<{ token: string; refreshtoken: string } | null>(null);
 
-  // Email verification state
   const [emailOtpData, setEmailOtpData] = useState<{
     active: boolean; email: string; totpSessionToken: string;
   }>({ active: false, email: "", totpSessionToken: "" });
@@ -62,7 +59,7 @@ function Signup() {
     };
   }, [emailTimer]);
 
-  // Fetch plans for the plan selection step
+
   const fetchPlans = useCallback(async () => {
     setLoadingPlans(true);
     try {
@@ -74,7 +71,7 @@ function Signup() {
         const defaultPlan = data.find(p => p.isDefault);
         if (defaultPlan) setSelectedPlanId(defaultPlan.id);
       }
-    } catch { /* ignore */ } finally { setLoadingPlans(false); }
+    } catch {  } finally { setLoadingPlans(false); }
   }, []);
 
   const handleCompleteVerification = async () => {
@@ -453,11 +450,15 @@ function Signup() {
                         required
                       />
                       <span
-                        className={styles.passwordToggle}
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </span>
+  className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-600 hover:text-gray-900"
+  onClick={() => setShowPassword((prev) => !prev)}
+>
+  {showPassword ? (
+    <EyeOff size={18} strokeWidth={2} />
+  ) : (
+    <Eye size={18} strokeWidth={2} />
+  )}
+</span>
                     </div>
                   </span>
                 </label>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { ApiConfig } from "../../config/apiconfig";
+import SettingsNav from "./SettingsNav";
 import toast from "react-hot-toast";
 import { Shield, Key, Copy, AlertTriangle, Check, Loader, RefreshCw, CheckCircle } from "lucide-react";
 
@@ -100,17 +101,19 @@ const resetpassword: React.FC = () => {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-4xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl md:text-3xl text-gray-800 dark:text-gray-100 font-bold flex items-center gap-3">
           <Shield className="text-violet-500 w-8 h-8" />
-          Security & Audit
+          Security & 2FA Recovery
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
           Manage your two-factor authentication (2FA) settings and recover authenticator accounts.
         </p>
       </div>
+
+      <SettingsNav />
 
       {/* Main Feature Container */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/60 shadow-sm overflow-hidden transition-all duration-300">

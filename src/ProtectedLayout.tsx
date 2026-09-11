@@ -16,9 +16,18 @@ function ProtectedRoute({
   const { authState } = useAuth();
   const { subscription } = useSubscription();
 
+  // Wait for auth verification to complete before determining auth state
+  if (authState.loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500" />
+      </div>
+    );
+  }
+
   // Not authenticated → redirect to login
   if (!authState.isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If a feature is required, check it (but wait for features to load first)
