@@ -30,6 +30,10 @@ import Transaction from "./pages/finance/Transaction";
 import TransactionDetails from "./pages/finance/Transactiondetail";
 import Goals from "./pages/finance/Goals";
 import Onboarding from "./pages/Onboarding/Onboarding";
+import AdminHub from "./pages/admin/AdminHub";
+import AdminUserManagement from "./pages/admin/AdminUserManagement";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminAccount from "./pages/admin/AdminAccount";
 import PlanManagement from "./pages/admin/PlanManagement";
 import FeatureManagement from "./pages/admin/FeatureManagement";
 import SubscriptionDashboard from "./pages/admin/SubscriptionDashboard";
@@ -175,9 +179,13 @@ function App() {
             </Route>
 
             {/* Admin Routes (role-gated internally) */}
+            <Route path="/admin" element={<AdminHub />} />
+            <Route path="/admin/users" element={<AdminUserManagement />} />
             <Route path="/admin/plans" element={<PlanManagement />} />
             <Route path="/admin/features" element={<FeatureManagement />} />
             <Route path="/admin/subscriptions" element={<SubscriptionDashboard />} />
+            <Route path="/admin/notifications" element={<AdminNotifications />} />
+            <Route path="/admin/account" element={<AdminAccount />} />
           </Route>
         </Route>
         <Route

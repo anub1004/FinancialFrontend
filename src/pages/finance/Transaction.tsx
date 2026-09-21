@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import FeatureGate from "../../Component/FeatureGate";
 import UpgradePrompt from "../../Component/UpgradePrompt";
+import { exportToCsv } from "../../utils/csvExport";
 
 interface TransactionItem {
   transactionId: string;
@@ -247,13 +248,37 @@ function Transaction() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">Transactions</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track your income and expenses</p>
         </div>
-        <button
-          onClick={openCreate}
-          className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Transaction
-        </button>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+          <button
+            onClick={() => {
+              if (transactions.length === 0) { toast.error("No transactions to export"); return; }
+              const headers = ["Date", "Type", "Category", "Description", "Amount", "Currency", "Payment Method", "Recurring"];
+              const rows = transactions.map((t) => [
+                new Date(t.transactionDate).toLocaleDateString("en-IN"),
+                isIncome(t.transactionType) ? "Income" : "Expense",
+                t.category,
+                t.description || "",
+                t.amount.toString(),
+                t.currency,
+                t.paymentMethod || "",
+                t.isRecurring ? "Yes" : "No",
+              ]);
+              exportToCsv(`transactions_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
+              toast.success("CSV exported!");
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Transaction
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -488,24 +513,7 @@ function Transaction() {
       </div>
 
       {/* Export CSV — requires 'export_csv' (Basic+) */}
-      <FeatureGate feature="export_csv" fallback={null}>
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={() => {
-              const csv = ["Type,Category,Description,Amount,Date,Method,Recurring",
-                ...transactions.map(t => `${isIncome(t.transactionType) ? "Income" : "Expense"},${t.category},"${t.description}",${t.amount},${t.transactionDate.split("T")[0]},${t.paymentMethod || ""},${t.isRecurring}`)].join("\n");
-              const blob = new Blob([csv], { type: "text/csv" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a"); a.href = url; a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`; a.click();
-              URL.revokeObjectURL(url);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        </div>
-      </FeatureGate>
+      
 
       {/* Create/Edit Modal */}
       {showModal && (

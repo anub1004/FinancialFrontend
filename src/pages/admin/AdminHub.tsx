@@ -45,8 +45,17 @@ export default function AdminHub() {
     else if (location.pathname.includes("users")) setActiveTab("users");
   }, [location.pathname]);
 
+  // Guard: wait if auth is still verifying
+  if (authState.loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-500" />
+      </div>
+    );
+  }
+
   // Guard: only admins may access this page
-  if (authState.role !== "Admin") {
+  if (authState.role?.toLowerCase() !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 

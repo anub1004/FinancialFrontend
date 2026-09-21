@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Bell,
   Send,
@@ -18,14 +18,20 @@ import {
   Server,
   X,
   Radio,
+  BarChart2,
+  TrendingUp,
+  Inbox,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminNavbar from './AdminNavbar';
 import { ApiConfig, NotificationAdminApiConfig } from '../../config/apiconfig';
 
-// Types
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 export type NotificationType = 'announcement' | 'update' | 'alert' | 'maintenance' | 'offer';
 export type PriorityLevel = 'low' | 'normal' | 'high' | 'urgent';
+export type ChannelKey = 'in-app' | 'email' | 'push';
+export type LogStatus = 'Sent' | 'Delivered' | 'Queued' | 'Failed';
 
 export interface AutomatedRule {
   id: string;
@@ -34,7 +40,7 @@ export interface AutomatedRule {
   conditionDescription: string;
   targetTier: string;
   timingOffset: string;
-  channels: ('in-app' | 'email' | 'push')[];
+  channels: ChannelKey[];
   titleTemplate: string;
   messageTemplate: string;
   isActive: boolean;
@@ -49,9 +55,9 @@ export interface NotificationLog {
   type: NotificationType;
   priority: PriorityLevel;
   targetAudience: string;
-  channels: ('in-app' | 'email' | 'push')[];
+  channels: ChannelKey[];
   sentAt: string;
-  status: 'Sent' | 'Delivered' | 'Queued' | 'Failed';
+  status: LogStatus;
   recipientCount: number;
   openRate?: string;
   actionUrl?: string;
@@ -61,368 +67,315 @@ export interface PlanOption {
   id: string;
   name: string;
   slug: string;
+  memberCount?: number;
+  color?: string;
 }
 
-const DEFAULT_PLANS: PlanOption[] = [
-  { id: 'free', name: 'Free Tier', slug: 'free' },
-  { id: 'basic', name: 'Basic Starter', slug: 'basic' },
-  { id: 'pro', name: 'Pro Plan', slug: 'pro' },
-  { id: 'advanced', name: 'Advanced Enterprise', slug: 'advanced' },
+interface BroadcastHistoryItem {
+  id?: string;
+  title: string;
+  message: string;
+  recipientsCount: number;
+  createdAt: string;
+  status?: string;
+}
+
+interface TierStat {
+  slug: string;
+  name: string;
+  memberCount: number;
+  color: string;
+}
+
+// ─── Constants (non-data) ─────────────────────────────────────────────────────
+
+const NOTIFICATION_TYPES: { value: NotificationType; label: string }[] = [
+  { value: 'announcement', label: 'Announcement' },
+  { value: 'update', label: 'Product Update' },
+  { value: 'alert', label: 'Security Alert' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'offer', label: 'Promotional Offer' },
 ];
 
-const INITIAL_RULES: AutomatedRule[] = [
-  {
-    id: 'rule-1',
-    name: 'Trial Expiration Notice',
-    triggerEvent: 'TRIAL_EXPIRING', 
-    conditionDescription: 'Fires 3 days before free trial expires',
-    targetTier: 'Trial Users (All Plans)',
-    timingOffset: '3 days before expiry',
-    channels: ['in-app', 'email'],
-    titleTemplate: 'Your {{plan_name}} trial ends in {{days_left}} days!',
-    messageTemplate: 'Hi {{user_name}}, your trial period is coming to an end on {{expiry_date}}. Upgrade now to keep uninterrupted access to real-time analytics.',
-    isActive: true,
-    lastTriggeredAt: 'Today at 09:15 AM',
-    totalTriggered: 142,
-  },
-  {
-    id: 'rule-2',
-    name: 'Subscription Renewal Alert',
-    triggerEvent: 'RENEWAL_UPCOMING',
-    conditionDescription: 'Fires 5 days before upcoming billing cycle',
-    targetTier: 'Active Paid Subscribers',
-    timingOffset: '5 days before renewal',
-    channels: ['email', 'in-app'],
-    titleTemplate: 'Upcoming renewal for your {{plan_name}} plan',
-    messageTemplate: 'Hello {{user_name}}, this is a courtesy notice that your subscription will renew on {{expiry_date}}. Check payment method to ensure uninterrupted service.',
-    isActive: true,
-    lastTriggeredAt: 'Yesterday at 04:30 PM',
-    totalTriggered: 298,
-  },
-  {
-    id: 'rule-3',
-    name: 'Payment Failed / Dunning Notice',
-    triggerEvent: 'PAYMENT_FAILED',
-    conditionDescription: 'Fires instantly on recurring charge failure',
-    targetTier: 'Past Due / Failed Invoices',
-    timingOffset: 'Immediate trigger',
-    channels: ['in-app', 'email', 'push'],
-    titleTemplate: 'Action Required: Payment failed for {{plan_name}}',
-    messageTemplate: 'We were unable to process your payment for {{plan_name}}. Please update your billing info to avoid account suspension.',
-    isActive: true,
-    lastTriggeredAt: '2 days ago',
-    totalTriggered: 19,
-  },
-  {
-    id: 'rule-4',
-    name: 'Usage Quota Reached (85%)',
-    triggerEvent: 'QUOTA_THRESHOLD',
-    conditionDescription: 'Fires when API/transaction quota exceeds 85%',
-    targetTier: 'Free & Basic Users',
-    timingOffset: 'Immediate on threshold hit',
-    channels: ['in-app'],
-    titleTemplate: "You have used 85% of your monthly limit",
-    messageTemplate: "Hi {{user_name}}, you are approaching your tier monthly transaction quota. Upgrade to Pro for unlimited usage!",
-    isActive: true,
-    lastTriggeredAt: '3 days ago',
-    totalTriggered: 521,
-  },
-  {
-    id: 'rule-5',
-    name: 'Inactive User Re-Engagement',
-    triggerEvent: 'INACTIVITY_21D',
-    conditionDescription: 'Fires when user has no activity for 21 days',
-    targetTier: 'Inactive Registered Users',
-    timingOffset: '21 days after last login',
-    channels: ['email'],
-    titleTemplate: 'We miss you! See your updated financial summary',
-    messageTemplate: "Hi {{user_name}}, new features have been added to your dashboard. Log in today to review your investment trends!",
-    isActive: false,
-    lastTriggeredAt: '1 week ago',
-    totalTriggered: 84,
-  },
-  {
-    id: 'rule-6',
-    name: 'Welcome & Onboarding Sequence',
-    triggerEvent: 'USER_REGISTERED',
-    conditionDescription: 'Fires 10 minutes after initial user registration',
-    targetTier: 'New Signups (All Plans)',
-    timingOffset: '10 min post registration',
-    channels: ['in-app', 'email'],
-    titleTemplate: 'Welcome to Financial Hub, {{user_name}}!',
-    messageTemplate: 'Welcome aboard! Start by connecting your first account or setting up monthly budgets in just 2 minutes.',
-    isActive: true,
-    lastTriggeredAt: '1 hour ago',
-    totalTriggered: 764,
-  },
+const PRIORITY_OPTIONS: { value: PriorityLevel; label: string; description: string }[] = [
+  { value: 'low', label: 'Low', description: 'Silent In-App' },
+  { value: 'normal', label: 'Normal', description: 'Standard Delivery' },
+  { value: 'high', label: 'High', description: 'Highlighted Alert' },
+  { value: 'urgent', label: 'Urgent', description: 'Banner + High Priority' },
 ];
 
-const INITIAL_LOGS: NotificationLog[] = [
-  {
-    id: 'log-101',
-    title: 'Scheduled Maintenance: System Upgrade Tonight',
-    message: 'We will be performing planned database upgrades from 02:00 to 03:00 UTC. Brief intermittent downtime may occur.',
-    type: 'maintenance',
-    priority: 'high',
-    targetAudience: 'All Users (1,248)',
-    channels: ['in-app', 'email'],
-    sentAt: '2026-09-08 18:30',
-    status: 'Delivered',
-    recipientCount: 1248,
-    openRate: '78.4%',
-  },
-  {
-    id: 'log-102',
-    title: 'Exclusive 25% Off Annual Pro Upgrade',
-    message: 'Unlock AI-powered financial forecasts and unlimited tax computations. Limited time promotion for starter members.',
-    type: 'offer',
-    priority: 'normal',
-    targetAudience: 'Free & Basic Tiers',
-    channels: ['in-app', 'email', 'push'],
-    sentAt: '2026-09-06 11:00',
-    status: 'Delivered',
-    recipientCount: 684,
-    openRate: '54.2%',
-    actionUrl: '/plans',
-  },
-  {
-    id: 'log-103',
-    title: 'New Feature: Automated Goal Tracking Released',
-    message: 'You can now set recurring milestone tracking on all your financial goals directly from the dashboard.',
-    type: 'update',
-    priority: 'normal',
-    targetAudience: 'Pro & Enterprise Tiers',
-    channels: ['in-app'],
-    sentAt: '2026-09-04 15:45',
-    status: 'Delivered',
-    recipientCount: 420,
-    openRate: '89.1%',
-  },
-  {
-    id: 'log-104',
-    title: 'Security Advisory: Two-Factor Authentication Recommended',
-    message: 'Enhance your financial account security by enabling two-factor authentication in your account settings.',
-    type: 'alert',
-    priority: 'urgent',
-    targetAudience: 'All Users (1,248)',
-    channels: ['in-app', 'push'],
-    sentAt: '2026-08-30 10:15',
-    status: 'Delivered',
-    recipientCount: 1248,
-    openRate: '82.6%',
-  },
+const CHANNEL_OPTIONS: { key: ChannelKey; label: string; description: string }[] = [
+  { key: 'in-app', label: 'In-App Bell', description: 'Instant popup' },
+  { key: 'email', label: 'Email', description: 'SMTP Queue' },
+  { key: 'push', label: 'Push Notice', description: 'Web Push API' },
 ];
+
+const TIER_COLORS: Record<string, string> = {
+  free: 'bg-gray-400',
+  basic: 'bg-blue-500',
+  pro: 'bg-violet-500',
+  advanced: 'bg-amber-500',
+};
+
+const LOG_STATUS_STYLES: Record<LogStatus, string> = {
+  Delivered: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+  Queued: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  Sent: 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300',
+  Failed: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+};
+
+const BROADCAST_MAX_LENGTH = 500;
+const TITLE_MAX_LENGTH = 120;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdminNotifications({ embedded = false }: { embedded?: boolean } = {}) {
-  // Navigation tabs inside Notifications Hub
-  const [activeSubTab, setActiveSubTab] = useState<'broadcast' | 'subscription' | 'automated' | 'logs'>('broadcast');
+  type SubTab = 'broadcast' | 'subscription' | 'automated' | 'logs';
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>('broadcast');
 
-  // Broadcast state
+  // ── Plans (loaded from API) ─────────────────────────────────────────────────
+  const [availablePlans, setAvailablePlans] = useState<PlanOption[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [tierStats, setTierStats] = useState<TierStat[]>([]);
+
+  // ── Broadcast state ─────────────────────────────────────────────────────────
   const [broadcastTitle, setBroadcastTitle] = useState('');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [broadcastType, setBroadcastType] = useState<NotificationType>('announcement');
   const [broadcastPriority, setBroadcastPriority] = useState<PriorityLevel>('normal');
   const [broadcastActionUrl, setBroadcastActionUrl] = useState('');
   const [broadcastActionLabel, setBroadcastActionLabel] = useState('');
-  const [broadcastChannels, setBroadcastChannels] = useState<Record<'in-app' | 'email' | 'push', boolean>>({
+  const [broadcastChannels, setBroadcastChannels] = useState<Record<ChannelKey, boolean>>({
     'in-app': true,
     email: false,
     push: false,
   });
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
 
-  // Subscription-based state
-  const [availablePlans, setAvailablePlans] = useState<PlanOption[]>(DEFAULT_PLANS);
-  const [selectedPlans, setSelectedPlans] = useState<string[]>(['free', 'basic']);
+  // ── Subscription-targeted state ─────────────────────────────────────────────
+  const [selectedPlans, setSelectedPlans] = useState<string[]>([]);
   const [targetStatus, setTargetStatus] = useState<string>('all');
   const [subTitle, setSubTitle] = useState('');
   const [subMessage, setSubMessage] = useState('');
   const [subType, setSubType] = useState<NotificationType>('offer');
   const [subPriority, setSubPriority] = useState<PriorityLevel>('normal');
-  const [subActionUrl, setSubActionUrl] = useState('/plans');
-  const [subChannels, setSubChannels] = useState<Record<'in-app' | 'email' | 'push', boolean>>({
+  const [subActionUrl, setSubActionUrl] = useState('');
+  const [subChannels, setSubChannels] = useState<Record<ChannelKey, boolean>>({
     'in-app': true,
     email: true,
     push: false,
   });
   const [isSendingSub, setIsSendingSub] = useState(false);
 
-  // Automated rules state
-  const [rules, setRules] = useState<AutomatedRule[]>(() => {
-    const saved = localStorage.getItem('admin_notification_rules');
-    return saved ? JSON.parse(saved) : INITIAL_RULES;
-  });
+  // ── Automated rules (loaded from API) ───────────────────────────────────────
+  const [rules, setRules] = useState<AutomatedRule[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(true);
 
-  // Logs state
-  const [logs, setLogs] = useState<NotificationLog[]>(() => {
-    const saved = localStorage.getItem('admin_notification_logs');
-    return saved ? JSON.parse(saved) : INITIAL_LOGS;
-  });
+  // ── History / Logs ──────────────────────────────────────────────────────────
+  const [broadcastHistory, setBroadcastHistory] = useState<BroadcastHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+
+  // ── Local notification logs (merged: history + static) ──────────────────────
   const [logSearch, setLogSearch] = useState('');
   const [logFilterStatus, setLogFilterStatus] = useState('all');
 
-  // Preview Modal / Details modal
-  const [viewLogDetail, setViewLogDetail] = useState<NotificationLog | null>(null);
+  // ── Detail modal ────────────────────────────────────────────────────────────
+  const [viewLogDetail, setViewLogDetail] = useState<BroadcastHistoryItem | null>(null);
 
-  // Broadcast history loaded from real API
-  const [broadcastHistory, setBroadcastHistory] = useState<Array<{title: string; message: string; recipientsCount: number; createdAt: string}>>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  // ─── Data Fetchers ──────────────────────────────────────────────────────────
 
-  // Fetch real plans if possible
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${ApiConfig.Api_Base_Url}api/admin/plans`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setAvailablePlans(
-              data.map((p: any) => ({
-                id: p.id || p.slug,
-                name: p.name,
-                slug: p.slug,
-              }))
-            );
-          }
-        }
-      } catch {
-        // Fallback to default plans already set
-      }
-    };
-    fetchPlans();
-  }, []);
-
-  // Fetch broadcast history from real API
-  const fetchBroadcastHistory = async () => {
-    setHistoryLoading(true);
+  const fetchPlans = useCallback(async () => {
+    setPlansLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(NotificationAdminApiConfig.history(1, 20), {
-        headers: token ? { Authorization: Bearer  } : {},
+      const res = await fetch(`${ApiConfig.Api_Base_Url}api/admin/plans`, {
+        headers: getAuthHeaders(),
       });
       if (res.ok) {
         const data = await res.json();
-        setBroadcastHistory(data.items ?? []);
+        const plans: PlanOption[] = Array.isArray(data)
+          ? data.map((p: any) => ({
+              id: p.id ?? p.slug,
+              name: p.name,
+              slug: p.slug,
+              memberCount: p.memberCount ?? p.userCount ?? undefined,
+              color: TIER_COLORS[p.slug] ?? 'bg-gray-400',
+            }))
+          : [];
+        setAvailablePlans(plans);
+
+        // Build tier stats from the same API response
+        const stats: TierStat[] = plans.map((p) => ({
+          slug: p.slug,
+          name: p.name,
+          memberCount: p.memberCount ?? 0,
+          color: TIER_COLORS[p.slug] ?? 'bg-gray-400',
+        }));
+        setTierStats(stats);
+
+        // Default-select the first plan if none selected
+        if (plans.length > 0) {
+          setSelectedPlans([plans[0].slug]);
+        }
       }
     } catch {
-      // silently ignore
+      toast.error('Unable to load subscription plans.');
     } finally {
-      setHistoryLoading(false);
+      setPlansLoading(false);
     }
-  };
+  }, []);
 
-  // Load broadcast history when on logs tab
-  useEffect(() => {
-    if (activeSubTab === 'logs') fetchBroadcastHistory();
-  }, [activeSubTab]);
+  const fetchBroadcastHistory = useCallback(
+    async (page = 1) => {
+      setHistoryLoading(true);
+      try {
+        const res = await fetch(NotificationAdminApiConfig.history(page, 20), {
+          headers: getAuthHeaders(),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Handle both {items, total} and array responses
+          const items: BroadcastHistoryItem[] = Array.isArray(data)
+            ? data
+            : data.items ?? data.data ?? [];
+          const total: number = data.total ?? data.totalCount ?? items.length;
+          setBroadcastHistory(items);
+          setHistoryTotal(total);
+          setHistoryPage(page);
+        }
+      } catch {
+        // Silently fail — history is informational
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    []
+  );
 
-  // Save rules to localStorage on change
-  const handleToggleRule = (id: string) => {
-    setRules((prev) => {
-      const updated = prev.map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r));
-      localStorage.setItem('admin_notification_rules', JSON.stringify(updated));
-      return updated;
-    });
-    toast.success('Automated rule status updated');
-  };
-
-  // Trigger test run for an automated rule
-  const handleTestTriggerRule = (rule: AutomatedRule) => {
-    toast.loading(`Simulating trigger for "${rule.name}"...`, { duration: 1200 });
-    setTimeout(() => {
-      const newLog: NotificationLog = {
-        id: `auto-${Date.now()}`,
-        title: `[AUTO-DISPATCH] ${rule.name}`,
-        message: rule.messageTemplate
-          .replace('{{user_name}}', 'Alex Carter')
-          .replace('{{plan_name}}', 'Pro Plan')
-          .replace('{{days_left}}', '3')
-          .replace('{{expiry_date}}', 'Sep 12, 2026'),
-        type: 'update',
-        priority: 'normal',
-        targetAudience: rule.targetTier,
-        channels: rule.channels,
-        sentAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
-        status: 'Delivered',
-        recipientCount: 38,
-        openRate: 'Pending',
-      };
-      setLogs((prev) => {
-        const updated = [newLog, ...prev];
-        localStorage.setItem('admin_notification_logs', JSON.stringify(updated));
-        return updated;
+  const fetchAutomatedRules = useCallback(async () => {
+    setRulesLoading(true);
+    try {
+      const res = await fetch(`${ApiConfig.Api_Base_Url}api/notificationadmin/rules`, {
+        headers: getAuthHeaders(),
       });
-      toast.success(`Automated trigger simulated! 38 test queue jobs dispatched.`);
-    }, 1200);
-  };
+      if (res.ok) {
+        const data = await res.json();
+        const ruleList: AutomatedRule[] = Array.isArray(data)
+          ? data
+          : data.items ?? data.data ?? [];
+        setRules(ruleList);
+      } else {
+        setRules([]);
+      }
+    } catch {
+      setRules([]);
+    } finally {
+      setRulesLoading(false);
+    }
+  }, []);
 
-  // Dynamic calculated audience for Subscription-Based Tab
+  useEffect(() => {
+    fetchPlans();
+    fetchBroadcastHistory(1);
+    fetchAutomatedRules();
+  }, [fetchPlans, fetchBroadcastHistory, fetchAutomatedRules]);
+
+  // ─── Derived / Computed ──────────────────────────────────────────────────────
+
+  const totalMembersFromTiers = useMemo(
+    () => tierStats.reduce((acc, t) => acc + t.memberCount, 0),
+    [tierStats]
+  );
+
   const calculatedSubAudience = useMemo(() => {
-    let base = 0;
-    if (selectedPlans.includes('free')) base += 450;
-    if (selectedPlans.includes('basic')) base += 320;
-    if (selectedPlans.includes('pro')) base += 340;
-    if (selectedPlans.includes('advanced')) base += 138;
+    if (selectedPlans.length === 0) return 0;
+    return tierStats
+      .filter((t) => selectedPlans.includes(t.slug))
+      .reduce((acc, t) => acc + t.memberCount, 0);
+  }, [selectedPlans, tierStats]);
 
-    if (targetStatus === 'trial') base = Math.round(base * 0.22);
-    else if (targetStatus === 'expiring') base = Math.round(base * 0.14);
-    else if (targetStatus === 'past_due') base = Math.max(12, Math.round(base * 0.04));
-    else if (targetStatus === 'active') base = Math.round(base * 0.85);
+  const totalNotificationsSent = useMemo(
+    () => broadcastHistory.reduce((acc, h) => acc + (h.recipientsCount ?? 0), 0),
+    [broadcastHistory]
+  );
 
-    return base;
-  }, [selectedPlans, targetStatus]);
+  const filteredLogs = useMemo(() => {
+    return broadcastHistory.filter((log) => {
+      const searchLower = logSearch.toLowerCase();
+      const matchesSearch =
+        log.title.toLowerCase().includes(searchLower) ||
+        log.message.toLowerCase().includes(searchLower);
+      const matchesStatus =
+        logFilterStatus === 'all' ||
+        (log.status ?? '').toLowerCase() === logFilterStatus.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+  }, [broadcastHistory, logSearch, logFilterStatus]);
 
-  // Handle Send Broadcast (To All Users)
+  // ─── Handlers ────────────────────────────────────────────────────────────────
+
   const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastTitle.trim()) {
-      toast.error('Please enter a notification title');
+      toast.error('Please enter a notification title.');
       return;
     }
     if (!broadcastMessage.trim()) {
-      toast.error('Please enter a notification message');
+      toast.error('Please enter a notification message.');
       return;
     }
-
-    const activeChannels = (Object.keys(broadcastChannels) as ('in-app' | 'email' | 'push')[]).filter(
+    const activeChannels = (Object.keys(broadcastChannels) as ChannelKey[]).filter(
       (k) => broadcastChannels[k]
     );
-
     if (activeChannels.length === 0) {
-      toast.error('Select at least one delivery channel');
+      toast.error('Select at least one delivery channel.');
       return;
     }
 
     setIsSendingBroadcast(true);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(NotificationAdminApiConfig.broadcast, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
-          title: broadcastTitle,
-          message: broadcastMessage,
+          title: broadcastTitle.trim(),
+          message: broadcastMessage.trim(),
+          type: broadcastType,
+          priority: broadcastPriority,
+          actionUrl: broadcastActionUrl.trim() || null,
+          actionLabel: broadcastActionLabel.trim() || null,
+          channels: activeChannels,
           targetPlanSlug: null,
           targetRole: null,
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message ?? `Request failed with status ${res.status}`);
+      }
       const result = await res.json();
-      const data = result.data ?? result;
-      const recipientsCount = data.recipientsCount ?? 0;
-      toast.success(`Broadcast sent to ${recipientsCount} user(s) successfully!`);
+      const count = result?.data?.recipientsCount ?? result?.recipientsCount ?? 0;
+      toast.success(
+        count > 0
+          ? `Broadcast queued for ${count.toLocaleString()} user${count !== 1 ? 's' : ''}. Processing asynchronously.`
+          : 'Broadcast accepted and queued for processing.'
+      );
       setBroadcastTitle('');
       setBroadcastMessage('');
       setBroadcastActionUrl('');
       setBroadcastActionLabel('');
-      // Refresh history
-      fetchBroadcastHistory();
+      fetchBroadcastHistory(1);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to send broadcast. Please try again.');
     } finally {
@@ -430,52 +383,59 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
     }
   };
 
-  // Handle Send Subscription-based Notification
   const handleSendSubscriptionNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subTitle.trim()) {
-      toast.error('Please enter a notification title');
+      toast.error('Please enter a notification title.');
       return;
     }
     if (!subMessage.trim()) {
-      toast.error('Please enter a notification message');
+      toast.error('Please enter a notification message.');
       return;
     }
     if (selectedPlans.length === 0) {
-      toast.error('Please select at least one subscription tier');
+      toast.error('Please select at least one subscription tier.');
       return;
     }
-
-    const activeChannels = (Object.keys(subChannels) as ('in-app' | 'email' | 'push')[]).filter(
+    const activeChannels = (Object.keys(subChannels) as ChannelKey[]).filter(
       (k) => subChannels[k]
     );
     if (activeChannels.length === 0) {
-      toast.error('Select at least one delivery channel');
+      toast.error('Select at least one delivery channel.');
       return;
     }
 
     setIsSendingSub(true);
     try {
-      const token = localStorage.getItem('token');
       let totalSent = 0;
       for (const planSlug of selectedPlans) {
         const res = await fetch(NotificationAdminApiConfig.broadcast, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ title: subTitle, message: subMessage, targetPlanSlug: planSlug, targetRole: null }),
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            title: subTitle.trim(),
+            message: subMessage.trim(),
+            type: subType,
+            priority: subPriority,
+            actionUrl: subActionUrl.trim() || null,
+            channels: activeChannels,
+            targetPlanSlug: planSlug,
+            targetRole: null,
+          }),
         });
         if (res.ok) {
           const result = await res.json();
           totalSent += result?.data?.recipientsCount ?? result?.recipientsCount ?? 0;
         }
       }
-      toast.success(`Subscription notification sent to ${totalSent} user(s) across ${selectedPlans.length} plan(s)!`);
+      toast.success(
+        `Subscription notification queued for ${totalSent.toLocaleString()} user${
+          totalSent !== 1 ? 's' : ''
+        } across ${selectedPlans.length} plan${selectedPlans.length !== 1 ? 's' : ''}.`
+      );
       setSubTitle('');
       setSubMessage('');
-      fetchBroadcastHistory();
+      fetchBroadcastHistory(1);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to send notification.');
     } finally {
@@ -483,89 +443,83 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
     }
   };
 
-  // Filtered logs
-  const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      const matchesSearch =
-        log.title.toLowerCase().includes(logSearch.toLowerCase()) ||
-        log.targetAudience.toLowerCase().includes(logSearch.toLowerCase()) ||
-        log.message.toLowerCase().includes(logSearch.toLowerCase());
-      const matchesStatus = logFilterStatus === 'all' || log.status.toLowerCase() === logFilterStatus.toLowerCase();
-      return matchesSearch && matchesStatus;
-    });
-  }, [logs, logSearch, logFilterStatus]);
+  const toggleRule = useCallback(
+    async (ruleId: string, newState: boolean) => {
+      setRules((prev) =>
+        prev.map((r) => (r.id === ruleId ? { ...r, isActive: newState } : r))
+      );
+      try {
+        await fetch(`${ApiConfig.Api_Base_Url}api/notificationadmin/rules/${ruleId}/toggle`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ isActive: newState }),
+        });
+      } catch {
+        // Revert on failure
+        setRules((prev) =>
+          prev.map((r) => (r.id === ruleId ? { ...r, isActive: !newState } : r))
+        );
+        toast.error('Failed to update rule status.');
+      }
+    },
+    []
+  );
 
-  // Quick Preset Selector for Subscription Tab
-  const applyPreset = (presetKey: string) => {
-    if (presetKey === 'pro_upgrade') {
-      setSelectedPlans(['free', 'basic']);
-      setTargetStatus('active');
-      setSubTitle('🔥 Special Offer: Upgrade to Pro & Save 20%');
-      setSubMessage(
-        'Unlock unlimited tax reports, advanced portfolio metrics, and premium goal forecasting. Upgrade today using code PRO20.'
-      );
-      setSubType('offer');
-      setSubPriority('normal');
-      setSubActionUrl('/plans');
-    } else if (presetKey === 'trial_ending') {
-      setSelectedPlans(['pro', 'advanced']);
-      setTargetStatus('trial');
-      setSubTitle('⏳ Your 14-day trial is ending soon');
-      setSubMessage(
-        "You have 3 days left on your premium trial. Ensure your billing information is updated so you don't lose access to real-time analytics."
-      );
-      setSubType('alert');
-      setSubPriority('high');
-      setSubActionUrl('/settings/billing');
-    } else if (presetKey === 'payment_past_due') {
-      setSelectedPlans(['basic', 'pro', 'advanced']);
-      setTargetStatus('past_due');
-      setSubTitle('⚠️ Action Required: Subscription Payment Past Due');
-      setSubMessage(
-        'We were unable to process your recent renewal payment. Please update your payment card to avoid disruption to your financial reports.'
-      );
-      setSubType('alert');
-      setSubPriority('urgent');
-      setSubActionUrl('/settings/billing');
-    } else if (presetKey === 'annual_discount') {
-      setSelectedPlans(['pro']);
-      setTargetStatus('active');
-      setSubTitle('✨ Switch to Annual Billing & Get 2 Months Free');
-      setSubMessage(
-        'Switch your current monthly subscription to an annual plan and instantly receive 2 months completely free!'
-      );
-      setSubType('offer');
-      setSubPriority('normal');
-      setSubActionUrl('/plans');
-    }
+  const togglePlanSelection = (slug: string) => {
+    setSelectedPlans((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
   };
+
+  // ─── Sub-tab config ───────────────────────────────────────────────────────────
+
+  const subTabs: { id: SubTab; label: string; icon: React.ReactNode; badge?: number | string }[] =
+    [
+      { id: 'broadcast', label: 'Broadcast All', icon: <Radio className="w-4 h-4" /> },
+      {
+        id: 'subscription',
+        label: 'By Subscription',
+        icon: <CreditCard className="w-4 h-4" />,
+        badge: availablePlans.length > 0 ? availablePlans.length : undefined,
+      },
+      {
+        id: 'automated',
+        label: 'Automated Rules',
+        icon: <Zap className="w-4 h-4" />,
+        badge: rules.filter((r) => r.isActive).length > 0 ? rules.filter((r) => r.isActive).length : undefined,
+      },
+      {
+        id: 'logs',
+        label: 'History',
+        icon: <Inbox className="w-4 h-4" />,
+        badge: historyTotal > 0 ? historyTotal : undefined,
+      },
+    ];
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
       {!embedded && <AdminNavbar />}
 
-      {/* Header & Quick Stats */}
+      {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 dark:from-violet-950/40 dark:via-indigo-950/30 dark:to-blue-950/30 p-6 rounded-2xl border border-violet-200/60 dark:border-violet-800/40">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/20">
-              <Bell className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                Notification Management Center
-                <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300">
-                  Multi-Channel & Scalable
-                </span>
-              </h1>
-              <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                Broadcast to all members, target specific subscription tiers, and configure automated event-driven triggers.
-              </p>
-            </div>
+        <div className="flex items-center gap-2.5">
+          <div className="p-2.5 rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/20">
+            <Bell className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              Notification Management Center
+              <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300">
+                Multi-Channel
+              </span>
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+              Broadcast to all members, target specific subscription tiers, and configure automated event-driven triggers.
+            </p>
           </div>
         </div>
-
-        {/* Scalability Badge */}
         <div className="flex items-center gap-2 bg-white dark:bg-gray-800/90 px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-xs">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-medium text-gray-700 dark:text-gray-300">Queue Worker:</span>
@@ -573,165 +527,157 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Sent */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Sent</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Dispatched</span>
             <Send className="w-4 h-4 text-violet-500" />
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-            {logs.reduce((acc, l) => acc + l.recipientCount, 0).toLocaleString()}
+            {historyLoading ? (
+              <span className="inline-block w-16 h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+            ) : (
+              totalNotificationsSent.toLocaleString()
+            )}
           </p>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
-            <CheckCircle2 className="w-3 h-3" /> 99.8% delivery rate
-          </span>
+          <span className="text-xs text-gray-400 mt-0.5 block">From {historyTotal} broadcasts</span>
         </div>
 
+        {/* Automated Rules */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Automated Rules</span>
             <Zap className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-            {rules.filter((r) => r.isActive).length}{' '}
-            <span className="text-xs font-normal text-gray-400">/ {rules.length} Active</span>
+            {rulesLoading ? (
+              <span className="inline-block w-10 h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+            ) : (
+              <>
+                {rules.filter((r) => r.isActive).length}
+                <span className="text-xs font-normal text-gray-400"> / {rules.length} Active</span>
+              </>
+            )}
           </p>
           <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">Event-driven background cron</span>
         </div>
 
+        {/* Total Members */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Active Subscribers</span>
-            <CreditCard className="w-4 h-4 text-blue-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Members</span>
+            <Users className="w-4 h-4 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">798</p>
-          <span className="text-xs text-violet-600 dark:text-violet-400 mt-0.5 block">Targetable by Tier</span>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+            {plansLoading ? (
+              <span className="inline-block w-16 h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+            ) : (
+              totalMembersFromTiers.toLocaleString()
+            )}
+          </p>
+          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">Across {availablePlans.length} subscription tiers</span>
         </div>
 
+        {/* Subscription Plans */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Avg Open Rate</span>
-            <Eye className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Subscription Plans</span>
+            <CreditCard className="w-4 h-4 text-indigo-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">68.4%</p>
-          <span className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 block">In-App & Email combined</span>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+            {plansLoading ? (
+              <span className="inline-block w-8 h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+            ) : (
+              availablePlans.length
+            )}
+          </p>
+          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">Active tier configurations</span>
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700/80 gap-2 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setActiveSubTab('broadcast')}
-          className={`flex items-center gap-2 pb-3 px-4 text-sm font-medium border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'broadcast'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
-        >
-          <Radio className="w-4 h-4" />
-          <span>Send to All Users (Broadcast)</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('subscription')}
-          className={`flex items-center gap-2 pb-3 px-4 text-sm font-medium border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'subscription'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          <span>Subscription-Based Notifications</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('automated')}
-          className={`flex items-center gap-2 pb-3 px-4 text-sm font-medium border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'automated'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
-        >
-          <Zap className="w-4 h-4" />
-          <span>Automated & Scalable Triggers</span>
-          <span className="px-1.5 py-0.2 bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 text-[10px] font-bold rounded-full">
-            {rules.filter((r) => r.isActive).length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('logs')}
-          className={`flex items-center gap-2 pb-3 px-4 text-sm font-medium border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'logs'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 font-semibold'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          <span>Dispatch History & Queue</span>
-          <span className="px-1.5 py-0.2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[10px] font-semibold rounded-full">
-            {logs.length}
-          </span>
-        </button>
+      {/* ── Sub-Tab Navigation ── */}
+      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl border border-gray-200/80 dark:border-gray-700/60">
+        {subTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveSubTab(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === tab.id
+                ? 'bg-white dark:bg-gray-700 text-violet-700 dark:text-violet-300 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            {tab.icon}
+            <span className="hidden sm:inline">{tab.label}</span>
+            {tab.badge !== undefined && (
+              <span className="px-1.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300 text-[10px] font-bold">
+                {tab.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* ─────────────────────────────────────────────────────────────
-          TAB 1: BROADCAST TO ALL USERS
-      ───────────────────────────────────────────────────────────── */}
+      {/* ══════════════ TAB: BROADCAST ALL ══════════════ */}
       {activeSubTab === 'broadcast' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Compose Form */}
-          <div className="lg:col-span-7 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+          {/* Left: Form */}
+          <div className="lg:col-span-7 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/40">
+                <Radio className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </div>
               <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Compose Global Broadcast
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Send Broadcast Notification
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  This notification will be dispatched to all 1,248 registered users in the database.
+                  Dispatched asynchronously — returns immediately, processes in background.
                 </p>
               </div>
-              <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                <Users className="w-3.5 h-3.5" /> Reach: ~1,248 Users
-              </span>
             </div>
 
             <form onSubmit={handleSendBroadcast} className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Notification Subject / Title *
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    Notification Title *
+                  </label>
+                  <span className="text-[11px] text-gray-400">
+                    {broadcastTitle.length}/{TITLE_MAX_LENGTH}
+                  </span>
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Planned System Maintenance or New Feature Release"
+                  maxLength={TITLE_MAX_LENGTH}
+                  placeholder="e.g. Important System Update — Action Required"
                   value={broadcastTitle}
                   onChange={(e) => setBroadcastTitle(e.target.value)}
                   className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
                 />
               </div>
 
-              {/* Type & Priority Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Type & Priority row */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Category / Type
+                    Notification Type
                   </label>
                   <select
                     value={broadcastType}
                     onChange={(e) => setBroadcastType(e.target.value as NotificationType)}
                     className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
                   >
-                    <option value="announcement">📣 Announcement</option>
-                    <option value="update">🚀 Product Update</option>
-                    <option value="alert">⚠️ Alert / Advisory</option>
-                    <option value="maintenance">🛠️ Scheduled Maintenance</option>
-                    <option value="offer">🎁 Special Offer</option>
+                    {NOTIFICATION_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Priority Level
@@ -741,28 +687,29 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                     onChange={(e) => setBroadcastPriority(e.target.value as PriorityLevel)}
                     className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
                   >
-                    <option value="low">Low (Silent In-App)</option>
-                    <option value="normal">Normal (Standard Delivery)</option>
-                    <option value="high">High (Highlighted Alert)</option>
-                    <option value="urgent">Urgent (Banner + High Priority)</option>
+                    {PRIORITY_OPTIONS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label} ({p.description})
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              {/* Message Content */}
+              {/* Message */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                     Message Body *
                   </label>
                   <span className="text-[11px] text-gray-400">
-                    {broadcastMessage.length}/500 characters
+                    {broadcastMessage.length}/{BROADCAST_MAX_LENGTH} characters
                   </span>
                 </div>
                 <textarea
                   rows={4}
                   required
-                  maxLength={500}
+                  maxLength={BROADCAST_MAX_LENGTH}
                   placeholder="Write clear, concise notification details for your users..."
                   value={broadcastMessage}
                   onChange={(e) => setBroadcastMessage(e.target.value)}
@@ -770,7 +717,7 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 />
               </div>
 
-              {/* Optional CTA Action Link */}
+              {/* Optional CTA */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
@@ -798,84 +745,52 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 </div>
               </div>
 
-              {/* Delivery Channels */}
+              {/* Channels */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Dispatch Channels (Select multiple for omni-channel delivery)
+                  Dispatch Channels
                 </label>
                 <div className="grid grid-cols-3 gap-3">
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={broadcastChannels['in-app']}
-                      onChange={(e) =>
-                        setBroadcastChannels((prev) => ({ ...prev, 'in-app': e.target.checked }))
-                      }
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <div>
-                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block">
-                        In-App Bell
-                      </span>
-                      <span className="text-[10px] text-gray-400">Instant popup</span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={broadcastChannels.email}
-                      onChange={(e) =>
-                        setBroadcastChannels((prev) => ({ ...prev, email: e.target.checked }))
-                      }
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <div>
-                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block">
-                        Email
-                      </span>
-                      <span className="text-[10px] text-gray-400">SMTP Queue</span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={broadcastChannels.push}
-                      onChange={(e) =>
-                        setBroadcastChannels((prev) => ({ ...prev, push: e.target.checked }))
-                      }
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <div>
-                      <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block">
-                        Push Notice
-                      </span>
-                      <span className="text-[10px] text-gray-400">Web Push API</span>
-                    </div>
-                  </label>
+                  {CHANNEL_OPTIONS.map((ch) => (
+                    <label
+                      key={ch.key}
+                      className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={broadcastChannels[ch.key]}
+                        onChange={(e) =>
+                          setBroadcastChannels((prev) => ({ ...prev, [ch.key]: e.target.checked }))
+                        }
+                        className="rounded text-violet-600 focus:ring-violet-500"
+                      />
+                      <div>
+                        <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block">
+                          {ch.label}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{ch.description}</span>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Submit */}
               <div className="pt-2 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => {
-                    setBroadcastTitle('Scheduled Maintenance Notice: Sept 12');
-                    setBroadcastMessage(
-                      'Our servers will undergo scheduled performance optimization this Saturday from 02:00 UTC to 03:00 UTC. Your portfolio data remains safe and accessible.'
-                    );
-                    setBroadcastType('maintenance');
-                    setBroadcastPriority('high');
-                    setBroadcastActionLabel('System Status');
-                    setBroadcastActionUrl('/dashboard');
+                    setBroadcastTitle('');
+                    setBroadcastMessage('');
+                    setBroadcastActionUrl('');
+                    setBroadcastActionLabel('');
+                    setBroadcastType('announcement');
+                    setBroadcastPriority('normal');
                   }}
                   className="px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors cursor-pointer"
                 >
-                  Load Sample Template
+                  Clear Form
                 </button>
-
                 <button
                   type="submit"
                   disabled={isSendingBroadcast}
@@ -897,180 +812,184 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
             </form>
           </div>
 
-          {/* Live Preview Panel */}
+          {/* Right: Live Preview + Recent History */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+            {/* Live Preview */}
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Eye className="w-3.5 h-3.5 text-violet-500" /> Live User Preview
+                <Eye className="w-3.5 h-3.5 text-violet-500" /> Live Preview
               </h3>
-
-              {/* In-App Dropdown Card Preview */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-900/50 shadow-inner">
-                <span className="text-[10px] font-semibold text-gray-400 uppercase block mb-2">
-                  In-App Notification Item Preview:
-                </span>
-
-                <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-300 shrink-0">
-                    {broadcastType === 'maintenance' && <Sliders className="w-4 h-4" />}
-                    {broadcastType === 'announcement' && <Radio className="w-4 h-4" />}
-                    {broadcastType === 'update' && <Sparkles className="w-4 h-4" />}
-                    {broadcastType === 'alert' && <AlertTriangle className="w-4 h-4" />}
-                    {broadcastType === 'offer' && <Zap className="w-4 h-4" />}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/30 dark:to-indigo-950/30 border border-violet-200/60 dark:border-violet-800/40 space-y-2">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 p-1.5 rounded-lg bg-violet-600 text-white shrink-0">
+                    <Bell className="w-3.5 h-3.5" />
                   </div>
-
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
-                        {broadcastTitle || 'Notification Subject Preview'}
-                      </h4>
-                      <span className="text-[10px] text-gray-400 whitespace-nowrap">Just now</span>
-                    </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 leading-relaxed line-clamp-3">
-                      {broadcastMessage ||
-                        'Your notification body text will appear here. It will be displayed cleanly across all mobile and desktop devices.'}
+                    <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
+                      {broadcastTitle || 'Notification Title'}
                     </p>
-
+                    <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1 line-clamp-3 leading-relaxed">
+                      {broadcastMessage || 'Your notification message will appear here...'}
+                    </p>
                     {broadcastActionLabel && (
-                      <div className="mt-2">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline">
-                          {broadcastActionLabel} →
-                        </span>
-                      </div>
+                      <span className="inline-block mt-2 px-2.5 py-1 rounded-lg bg-violet-600 text-white text-[10px] font-semibold">
+                        {broadcastActionLabel}
+                      </span>
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Scalable Delivery Guarantee Note */}
-              <div className="mt-4 p-3 rounded-xl bg-violet-50/60 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/40 text-[11px] text-gray-600 dark:text-gray-400 space-y-1.5">
-                <div className="font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-1.5">
-                  <Server className="w-3.5 h-3.5" /> High-Throughput Dispatch Engine
+                <div className="flex items-center gap-2 pt-1 border-t border-violet-200/60 dark:border-violet-800/40">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 font-semibold">
+                    {NOTIFICATION_TYPES.find((t) => t.value === broadcastType)?.label ?? broadcastType}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-semibold capitalize">
+                    {broadcastPriority} Priority
+                  </span>
                 </div>
-                <p>
-                  Broadcasting uses partitioned message queues and concurrency pools so delivery does not block user sessions or database transactions.
-                </p>
               </div>
+            </div>
+
+            {/* Recent Broadcast History */}
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-violet-500" /> Recent Broadcasts
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => fetchBroadcastHistory(1)}
+                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${historyLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : broadcastHistory.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-400">
+                  No broadcast history yet.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {broadcastHistory.slice(0, 8).map((item, idx) => (
+                    <div
+                      key={item.id ?? idx}
+                      className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                          {item.title}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {item.recipientsCount?.toLocaleString() ?? 0} recipients &middot;{' '}
+                          {new Date(item.createdAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          TAB 2: SUBSCRIPTION-BASED NOTIFICATIONS
-      ───────────────────────────────────────────────────────────── */}
+      {/* ══════════════ TAB: BY SUBSCRIPTION ══════════════ */}
       {activeSubTab === 'subscription' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Form */}
-          <div className="lg:col-span-7 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+          {/* Left: Form */}
+          <div className="lg:col-span-7 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/40">
+                <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
               <div>
-                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Targeted Subscription Cohort
+                <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Send Targeted Notification by Plan
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Send customized messaging according to member tier, status, or renewal triggers.
+                  Target specific subscription tiers with personalized messaging.
                 </p>
-              </div>
-
-              {/* Dynamic Reach Counter */}
-              <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                <Users className="w-3.5 h-3.5" /> Est. Reach: ~{calculatedSubAudience} Members
               </div>
             </div>
 
-            {/* Quick Templates Bar */}
-            <div className="mb-5 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-700">
-              <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-2">
-                ⚡ Quick Campaign Presets:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => applyPreset('pro_upgrade')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-violet-500 hover:text-violet-600 transition-colors cursor-pointer"
-                >
-                  🚀 Pro Upgrade Offer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('trial_ending')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-amber-500 hover:text-amber-600 transition-colors cursor-pointer"
-                >
-                  ⏳ Trial Ending Soon (3 Days)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('payment_past_due')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-red-500 hover:text-red-600 transition-colors cursor-pointer"
-                >
-                  ⚠️ Payment Past Due
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyPreset('annual_discount')}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-violet-500 hover:text-violet-600 transition-colors cursor-pointer"
-                >
-                  ✨ Annual Plan Discount
-                </button>
-              </div>
+            {/* Plan Selection */}
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Target Subscription Tiers *
+              </label>
+              {plansLoading ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />
+                  ))}
+                </div>
+              ) : availablePlans.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No subscription plans found.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {availablePlans.map((plan) => (
+                    <label
+                      key={plan.id}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                        selectedPlans.includes(plan.slug)
+                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPlans.includes(plan.slug)}
+                        onChange={() => togglePlanSelection(plan.slug)}
+                        className="rounded text-violet-600 focus:ring-violet-500"
+                      />
+                      <div className={`w-2 h-2 rounded-full ${plan.color ?? TIER_COLORS[plan.slug] ?? 'bg-gray-400'}`} />
+                      <div>
+                        <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block">
+                          {plan.name}
+                        </span>
+                        {plan.memberCount !== undefined && (
+                          <span className="text-[10px] text-gray-400">
+                            {plan.memberCount.toLocaleString()} members
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSendSubscriptionNotification} className="space-y-4">
-              {/* Plan Tiers Selection */}
+              {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Target Subscription Tier(s) *
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Notification Title *
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {availablePlans.map((plan) => {
-                    const isChecked = selectedPlans.includes(plan.slug);
-                    return (
-                      <button
-                        key={plan.slug}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPlans((prev) =>
-                            prev.includes(plan.slug)
-                              ? prev.filter((p) => p !== plan.slug)
-                              : [...prev, plan.slug]
-                          );
-                        }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          isChecked
-                            ? 'border-violet-600 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-semibold shadow-sm'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium">{plan.name}</span>
-                          {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-violet-600" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <input
+                  type="text"
+                  required
+                  maxLength={TITLE_MAX_LENGTH}
+                  placeholder="Tailored subject for your targeted tier..."
+                  value={subTitle}
+                  onChange={(e) => setSubTitle(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
+                />
               </div>
 
-              {/* Status Targeting */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Subscription Status Condition
-                  </label>
-                  <select
-                    value={targetStatus}
-                    onChange={(e) => setTargetStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
-                  >
-                    <option value="all">All Subscribers in Selected Tiers</option>
-                    <option value="active">Active Paying Only</option>
-                    <option value="trial">Free Trial Users Only</option>
-                    <option value="expiring">Expiring Within 7 Days</option>
-                    <option value="past_due">Past Due / Grace Period</option>
-                  </select>
-                </div>
-
+              {/* Type & Priority */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Notification Type
@@ -1080,27 +999,27 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                     onChange={(e) => setSubType(e.target.value as NotificationType)}
                     className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
                   >
-                    <option value="offer">🎁 Special Promotion / Upgrade</option>
-                    <option value="alert">⚠️ Renewal / Billing Alert</option>
-                    <option value="update">🚀 Exclusive Tier Feature</option>
-                    <option value="announcement">📣 Tier Announcement</option>
+                    {NOTIFICATION_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Targeted Subject *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Exclusive 20% discount on Pro Plan upgrade"
-                  value={subTitle}
-                  onChange={(e) => setSubTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={subPriority}
+                    onChange={(e) => setSubPriority(e.target.value as PriorityLevel)}
+                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
+                  >
+                    {PRIORITY_OPTIONS.filter((p) => p.value !== 'low').map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label} — {p.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Message */}
@@ -1111,7 +1030,7 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 <textarea
                   rows={4}
                   required
-                  maxLength={500}
+                  maxLength={BROADCAST_MAX_LENGTH}
                   placeholder="Craft your message tailored to this specific subscription tier..."
                   value={subMessage}
                   onChange={(e) => setSubMessage(e.target.value)}
@@ -1119,11 +1038,11 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 />
               </div>
 
-              {/* Action Link & Channels */}
+              {/* CTA Link & Channels */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    CTA Destination Link
+                    CTA Destination URL (Optional)
                   </label>
                   <input
                     type="text"
@@ -1133,56 +1052,23 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                     className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Priority
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Dispatch Channels
                   </label>
-                  <select
-                    value={subPriority}
-                    onChange={(e) => setSubPriority(e.target.value as PriorityLevel)}
-                    className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
-                  >
-                    <option value="normal">Normal Delivery</option>
-                    <option value="high">High Priority</option>
-                    <option value="urgent">Urgent / Critical</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Channels */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Dispatch Channels
-                </label>
-                <div className="flex gap-4">
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={subChannels['in-app']}
-                      onChange={(e) => setSubChannels((p) => ({ ...p, 'in-app': e.target.checked }))}
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <span>In-App Notification</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={subChannels.email}
-                      onChange={(e) => setSubChannels((p) => ({ ...p, email: e.target.checked }))}
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <span>Email Notification</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={subChannels.push}
-                      onChange={(e) => setSubChannels((p) => ({ ...p, push: e.target.checked }))}
-                      className="rounded text-violet-600 focus:ring-violet-500"
-                    />
-                    <span>Web Push</span>
-                  </label>
+                  <div className="flex gap-3">
+                    {CHANNEL_OPTIONS.map((ch) => (
+                      <label key={ch.key} className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={subChannels[ch.key]}
+                          onChange={(e) => setSubChannels((p) => ({ ...p, [ch.key]: e.target.checked }))}
+                          className="rounded text-violet-600 focus:ring-violet-500"
+                        />
+                        <span>{ch.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -1190,7 +1076,7 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
               <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={isSendingSub}
+                  disabled={isSendingSub || selectedPlans.length === 0}
                   className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-md shadow-violet-500/20 transition-all cursor-pointer"
                 >
                   {isSendingSub ? (
@@ -1201,7 +1087,13 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Send to {calculatedSubAudience} Target Subscribers</span>
+                      <span>
+                        Send to{' '}
+                        {calculatedSubAudience > 0
+                          ? `~${calculatedSubAudience.toLocaleString()} `
+                          : ''}
+                        Target Subscribers
+                      </span>
                     </>
                   )}
                 </button>
@@ -1209,301 +1101,247 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
             </form>
           </div>
 
-          {/* Right Column: Breakdown & Tier Stats */}
+          {/* Right: Tier Breakdown */}
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <CreditCard className="w-3.5 h-3.5 text-violet-500" /> Subscription Breakdown
               </h3>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-                    <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                      Free Tier Members
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-gray-100">450</span>
+              {plansLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />
+                  ))}
                 </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                    <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                      Basic Starter
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-gray-100">320</span>
+              ) : tierStats.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No tier data available.</p>
+              ) : (
+                <div className="space-y-3">
+                  {tierStats.map((tier) => (
+                    <div
+                      key={tier.slug}
+                      className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700/60"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-2.5 h-2.5 rounded-full ${tier.color}`} />
+                        <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                          {tier.name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                          {tier.memberCount.toLocaleString()}
+                        </span>
+                        {totalMembersFromTiers > 0 && (
+                          <span className="block text-[10px] text-gray-400">
+                            {((tier.memberCount / totalMembersFromTiers) * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {totalMembersFromTiers > 0 && (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/50">
+                      <span className="text-xs font-bold text-violet-700 dark:text-violet-300">
+                        Total Audience
+                      </span>
+                      <span className="text-xs font-bold text-violet-700 dark:text-violet-300">
+                        {totalMembersFromTiers.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
-                    <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                      Pro Plan (Premium)
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-gray-100">340</span>
+            {/* Audience Preview */}
+            {selectedPlans.length > 0 && (
+              <div className="bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/30 dark:to-indigo-950/30 p-4 rounded-2xl border border-violet-200/60 dark:border-violet-800/40">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <span className="text-xs font-bold text-violet-700 dark:text-violet-300">
+                    Estimated Audience Reach
+                  </span>
                 </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                      Advanced Enterprise
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-gray-900 dark:text-gray-100">138</span>
-                </div>
-              </div>
-
-              {/* Conversion Optimization Tip */}
-              <div className="mt-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Automated Conversion Triggers
-                </div>
-                <p>
-                  Targeting free tier users with personalized upgrade incentives yields an average 18.2% conversion rate compared to untargeted broadcasts.
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {calculatedSubAudience.toLocaleString()}
+                  <span className="text-sm font-normal text-gray-500 ml-1">users</span>
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  Across {selectedPlans.length} selected plan{selectedPlans.length !== 1 ? 's' : ''}
                 </p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          TAB 3: AUTOMATED & SCALABLE NOTIFICATIONS
-      ───────────────────────────────────────────────────────────── */}
+      {/* ══════════════ TAB: AUTOMATED RULES ══════════════ */}
       {activeSubTab === 'automated' && (
-        <div className="space-y-6">
-          {/* Engine & Scalability Info Banner */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-500" />
-                  Automated Event-Driven Delivery Engine
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  These rules trigger automatically in the background when specific subscription milestones, payment webhooks, or inactivity thresholds are met.
-                </p>
-              </div>
-
-              {/* Scalability spec chips */}
-              <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium flex items-center gap-1">
-                  <Server className="w-3 h-3 text-violet-500" /> Async Micro-Queues
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                Automated Event-Driven Rules
+              </h2>
+              {!rulesLoading && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[11px] font-semibold">
+                  {rules.filter((r) => r.isActive).length} / {rules.length} Active
                 </span>
-                <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium flex items-center gap-1">
-                  <Sliders className="w-3 h-3 text-blue-500" /> Concurrency: 4 Workers
-                </span>
-                <span className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-emerald-500" /> Cron: Hourly Polling
-                </span>
-              </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={fetchAutomatedRules}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title="Refresh rules"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${rulesLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
-          {/* Rules Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {rules.map((rule) => (
-              <div
-                key={rule.id}
-                className={`p-5 rounded-2xl border transition-all flex flex-col justify-between ${
-                  rule.isActive
-                    ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm'
-                    : 'bg-gray-50/70 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/60 opacity-80'
-                }`}
-              >
-                <div>
-                  {/* Top bar: title + toggle */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`p-2 rounded-xl text-white ${
-                          rule.isActive ? 'bg-amber-500 shadow-sm shadow-amber-500/20' : 'bg-gray-400'
-                        }`}
-                      >
-                        <Zap className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                          {rule.name}
-                        </h4>
-                        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 font-mono">
-                          {rule.triggerEvent}
-                        </span>
-                      </div>
+          {rulesLoading ? (
+            <div className="p-5 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="p-10 text-center">
+              <Zap className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                No automated rules configured
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Automated rules are configured server-side. Contact your system administrator.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+              {rules.map((rule) => (
+                <div key={rule.id} className="p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {rule.name}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                        {rule.triggerEvent}
+                      </span>
                     </div>
-
-                    {/* Active Switch */}
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{rule.conditionDescription}</p>
+                    <div className="flex flex-wrap gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" /> {rule.targetTier}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {rule.timingOffset}
+                      </span>
+                      {rule.lastTriggeredAt && (
+                        <span className="flex items-center gap-1">
+                          <Play className="w-3 h-3" /> Last: {rule.lastTriggeredAt}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <BarChart2 className="w-3 h-3" /> {rule.totalTriggered.toLocaleString()} fired
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {rule.channels.map((ch) => (
+                        <span
+                          key={ch}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                        >
+                          {ch}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
                     <button
                       type="button"
-                      onClick={() => handleToggleRule(rule.id)}
-                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      onClick={() => toggleRule(rule.id, !rule.isActive)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
                         rule.isActive ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'
                       }`}
+                      role="switch"
+                      aria-checked={rule.isActive}
+                      title={rule.isActive ? 'Deactivate rule' : 'Activate rule'}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                          rule.isActive ? 'translate-x-5' : 'translate-x-0'
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                          rule.isActive ? 'translate-x-6' : 'translate-x-1'
                         }`}
                       />
                     </button>
-                  </div>
-
-                  {/* Condition & Timing */}
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-                    {rule.conditionDescription}
-                  </p>
-
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/60 space-y-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    <div className="flex justify-between">
-                      <span>Target Cohort:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-200">
-                        {rule.targetTier}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Trigger Timing:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-200">
-                        {rule.timingOffset}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Channels:</span>
-                      <div className="flex gap-1">
-                        {rule.channels.map((ch) => (
-                          <span
-                            key={ch}
-                            className="px-1.5 py-0.5 text-[10px] uppercase font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded"
-                          >
-                            {ch}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Template Preview */}
-                  <div className="mt-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700/50 text-[11px]">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300 block truncate">
-                      Subject: {rule.titleTemplate}
+                    <span className={`text-xs font-semibold ${rule.isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                      {rule.isActive ? 'Active' : 'Paused'}
                     </span>
-                    <p className="text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 italic">
-                      "{rule.messageTemplate}"
-                    </p>
                   </div>
                 </div>
-
-                {/* Bottom stats & Test Button */}
-                <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">
-                    Triggered: <strong className="text-gray-700 dark:text-gray-200">{rule.totalTriggered}x</strong>
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTestTriggerRule(rule)}
-                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/40 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Play className="w-3 h-3" /> Simulate Run
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Variables Reference Guide */}
-          <div className="p-5 rounded-2xl bg-violet-50/50 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-800/40">
-            <h4 className="text-xs font-bold text-violet-900 dark:text-violet-200 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-violet-600" /> Dynamic Template Variables Available:
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-violet-100 dark:border-violet-900/40">
-                <code className="font-bold text-violet-600 dark:text-violet-400 font-mono">
-                  {'{{user_name}}'}
-                </code>
-                <span className="text-[11px] text-gray-500 block">Member full name</span>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-violet-100 dark:border-violet-900/40">
-                <code className="font-bold text-violet-600 dark:text-violet-400 font-mono">
-                  {'{{plan_name}}'}
-                </code>
-                <span className="text-[11px] text-gray-500 block">Current subscription tier</span>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-violet-100 dark:border-violet-900/40">
-                <code className="font-bold text-violet-600 dark:text-violet-400 font-mono">
-                  {'{{days_left}}'}
-                </code>
-                <span className="text-[11px] text-gray-500 block">Days before expiration</span>
-              </div>
-              <div className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-violet-100 dark:border-violet-900/40">
-                <code className="font-bold text-violet-600 dark:text-violet-400 font-mono">
-                  {'{{expiry_date}}'}
-                </code>
-                <span className="text-[11px] text-gray-500 block">Calculated renewal date</span>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          TAB 4: DISPATCH HISTORY & AUDIT LOGS
-      ───────────────────────────────────────────────────────────── */}
+      {/* ══════════════ TAB: HISTORY / LOGS ══════════════ */}
       {activeSubTab === 'logs' && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {/* Table Controls */}
-          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search logs by subject, audience, or message..."
-                value={logSearch}
-                onChange={(e) => setLogSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
-              />
-            </div>
-
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={logFilterStatus}
-                onChange={(e) => setLogFilterStatus(e.target.value)}
-                className="px-3 py-2 text-xs bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
-              >
-                <option value="all">All Statuses</option>
-                <option value="delivered">Delivered</option>
-                <option value="sent">Sent</option>
-                <option value="queued">Queued</option>
-                <option value="failed">Failed</option>
-              </select>
-
+              <Inbox className="w-4 h-4 text-violet-500" />
+              <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                Notification History
+              </h2>
+              {!historyLoading && (
+                <span className="text-xs text-gray-400">({historyTotal} total)</span>
+              )}
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search notifications..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full sm:w-52 pl-8 pr-3 py-2 text-xs bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <select
+                  value={logFilterStatus}
+                  onChange={(e) => setLogFilterStatus(e.target.value)}
+                  className="pl-7 pr-3 py-2 text-xs bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-violet-500 focus:outline-none dark:text-white appearance-none"
+                >
+                  <option value="all">All Status</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="queued">Queued</option>
+                  <option value="sent">Sent</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
               <button
                 type="button"
-                onClick={() => {
-                  setLogs(INITIAL_LOGS);
-                  localStorage.removeItem('admin_notification_logs');
-                  toast.success('Logs reset to default history');
-                }}
-                className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 transition-colors cursor-pointer"
+                onClick={() => fetchBroadcastHistory(historyPage)}
+                className="p-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                title="Refresh"
               >
-                Reset
+                <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${historyLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 dark:bg-gray-700/40 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                <tr>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4">Notification Subject</th>
-                  <th className="py-3.5 px-4">Target Segment</th>
-                  <th className="py-3.5 px-4">Channels</th>
                   <th className="py-3.5 px-4">Dispatched</th>
                   <th className="py-3.5 px-4">Recipients</th>
                   <th className="py-3.5 px-4">Status</th>
@@ -1511,16 +1349,26 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                {filteredLogs.length === 0 ? (
+                {historyLoading ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={5} className="py-3 px-4">
+                        <div className="h-8 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-lg" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-400">
-                      No notification logs found matching your criteria.
+                    <td colSpan={5} className="py-10 text-center text-gray-400">
+                      {logSearch || logFilterStatus !== 'all'
+                        ? 'No notifications match your filters.'
+                        : 'No broadcast history yet. Send your first notification above.'}
                     </td>
                   </tr>
                 ) : (
-                  filteredLogs.map((log) => (
+                  filteredLogs.map((log, idx) => (
                     <tr
-                      key={log.id}
+                      key={log.id ?? idx}
                       className="hover:bg-gray-50/70 dark:hover:bg-gray-700/20 transition-colors"
                     >
                       <td className="py-3.5 px-4">
@@ -1531,49 +1379,28 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                           {log.message}
                         </div>
                       </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                          {log.targetAudience}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex gap-1">
-                          {log.channels.map((ch) => (
-                            <span
-                              key={ch}
-                              className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
-                            >
-                              {ch}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-
                       <td className="py-3.5 px-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
-                        {log.sentAt}
+                        {new Date(log.createdAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </td>
-
                       <td className="py-3.5 px-4 whitespace-nowrap font-medium text-gray-800 dark:text-gray-200">
-                        {log.recipientCount.toLocaleString()}
+                        {(log.recipientsCount ?? 0).toLocaleString()}
                       </td>
-
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                            log.status === 'Delivered'
-                              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                              : log.status === 'Queued'
-                              ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                              : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                            LOG_STATUS_STYLES[(log.status as LogStatus) ?? 'Queued'] ?? LOG_STATUS_STYLES['Queued']
                           }`}
                         >
                           <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                          {log.status}
+                          {log.status ?? 'Queued'}
                         </span>
                       </td>
-
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <button
                           type="button"
@@ -1589,17 +1416,44 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {historyTotal > 20 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+              <span className="text-xs text-gray-400">
+                Page {historyPage} of {Math.ceil(historyTotal / 20)}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={historyPage <= 1}
+                  onClick={() => fetchBroadcastHistory(historyPage - 1)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={historyPage >= Math.ceil(historyTotal / 20)}
+                  onClick={() => fetchBroadcastHistory(historyPage + 1)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Log Detail Modal */}
+      {/* ══════════════ Detail Modal ══════════════ */}
       {viewLogDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 border border-gray-200 dark:border-gray-700 shadow-2xl relative space-y-4">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-                  Dispatched Log Details
+                  Broadcast Detail
                 </span>
                 <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mt-1">
                   {viewLogDetail.title}
@@ -1620,36 +1474,30 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
 
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40">
-                <span className="text-gray-400 block text-[11px]">Target Audience</span>
-                <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  {viewLogDetail.targetAudience}
-                </span>
-              </div>
-              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40">
                 <span className="text-gray-400 block text-[11px]">Total Recipients</span>
                 <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  {viewLogDetail.recipientCount.toLocaleString()} Users
+                  {(viewLogDetail.recipientsCount ?? 0).toLocaleString()} Users
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40">
-                <span className="text-gray-400 block text-[11px]">Dispatched Timestamp</span>
+                <span className="text-gray-400 block text-[11px]">Dispatched At</span>
                 <span className="font-semibold text-gray-800 dark:text-gray-200">
-                  {viewLogDetail.sentAt}
+                  {new Date(viewLogDetail.createdAt).toLocaleString()}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40">
                 <span className="text-gray-400 block text-[11px]">Delivery Status</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {viewLogDetail.status}
+                  {viewLogDetail.status ?? 'Queued'}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-700/40">
+                <span className="text-gray-400 block text-[11px]">Broadcast ID</span>
+                <span className="font-mono text-[10px] text-gray-600 dark:text-gray-400 truncate block">
+                  {viewLogDetail.id ?? 'N/A'}
                 </span>
               </div>
             </div>
-
-            {viewLogDetail.actionUrl && (
-              <div className="text-xs text-gray-500">
-                Action Link: <code className="text-violet-600">{viewLogDetail.actionUrl}</code>
-              </div>
-            )}
 
             <div className="pt-2 flex justify-end">
               <button
@@ -1657,7 +1505,7 @@ export default function AdminNotifications({ embedded = false }: { embedded?: bo
                 onClick={() => setViewLogDetail(null)}
                 className="px-4 py-2 text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl transition-colors cursor-pointer"
               >
-                Close Details
+                Close
               </button>
             </div>
           </div>

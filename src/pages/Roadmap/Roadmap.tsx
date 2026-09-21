@@ -18,6 +18,8 @@ import {
   Target,
   RefreshCw,
   Sliders,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -40,6 +42,7 @@ export interface FinancialMilestone {
   category: Exclude<MilestoneCategory, "All">;
   targetMetric: string;
   actionTip: string;
+  targetDate?: string;
   appRoute?: string;
   appRouteLabel?: string;
   isCustom?: boolean;
@@ -378,10 +381,49 @@ const CATEGORIES: MilestoneCategory[] = [
   "Life Milestones",
 ];
 
+// Category → icon + color mapping, reused for badges and the diagnostic quiz result.
+const CATEGORY_META: Record<
+  Exclude<MilestoneCategory, "All">,
+  { icon: React.ReactNode; classes: string }
+> = {
+  "Emergency & Savings": {
+    icon: <DollarSign className="w-3 h-3" />,
+    classes: "bg-sky-500/10 text-sky-600 dark:text-sky-300 border-sky-500/20",
+  },
+  "Debt Elimination": {
+    icon: <Landmark className="w-3 h-3" />,
+    classes: "bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/20",
+  },
+  "Investing & Wealth": {
+    icon: <TrendingUp className="w-3 h-3" />,
+    classes: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20",
+  },
+  "Tax & Protection": {
+    icon: <ShieldCheck className="w-3 h-3" />,
+    classes: "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20",
+  },
+  "Life Milestones": {
+    icon: <Zap className="w-3 h-3" />,
+    classes: "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20",
+  },
+};
+
+type QuizEmergency = "none" | "starter" | "full";
+type QuizDebt = "high" | "moderate" | "none";
+type QuizInvestRate = "0" | "match" | "max";
+type QuizNetWorth = "building" | "sixfigures" | "fire";
+
+function daysUntil(dateStr?: string): number | null {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.ceil(diff / 86400000);
+}
+
 export default function Roadmap() {
   const [selectedStage, setSelectedStage] = useState<number | "all">("all");
   const [selectedCategory, setSelectedCategory] = useState<MilestoneCategory>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   // Completed milestones state in localStorage
   const [completedMap, setCompletedMap] = useState<Record<string, boolean>>(() => {
@@ -412,6 +454,7 @@ export default function Roadmap() {
   // Modals state
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const [quizModalOpen, setQuizModalOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // New Custom Milestone Form State
   const [newTitle, setNewTitle] = useState("");
@@ -420,12 +463,14 @@ export default function Roadmap() {
   const [newCategory, setNewCategory] = useState<Exclude<MilestoneCategory, "All">>("Life Milestones");
   const [newStage, setNewStage] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [newMetric, setNewMetric] = useState("");
+  const [newTargetDate, setNewTargetDate] = useState("");
 
   // Quiz state
-  const [quizEmergency, setQuizEmergency] = useState<"none" | "starter" | "full">("starter");
-  const [quizDebt, setQuizDebt] = useState<"high" | "moderate" | "none">("high");
-  const [quizInvestRate, setQuizInvestRate] = useState<"0" | "match" | "max">("match");
-  const [quizNetWorth, setQuizNetWorth] = useState<"building" | "sixfigures" | "fire">("building");
+  const [quizEmergency, setQuizEmergency] = useState<QuizEmergency>("starter");
+  const [quizDebt, setQuizDebt] = useState<QuizDebt>("high");
+  const [quizInvestRate, setQuizInvestRate] = useState<QuizInvestRate>("match");
+  const [quizNetWorth, setQuizNetWorth] = useState<QuizNetWorth>("building");
+  const [quizResult, setQuizResult] = useState<{ stage: 1 | 2 | 3 | 4 | 5; reason: string } | null>(null);
 
   // Sync to localStorage
   useEffect(() => {
@@ -456,6 +501,9 @@ export default function Roadmap() {
       if (selectedCategory !== "All" && m.category !== selectedCategory) {
         return false;
       }
+      if (hideCompleted && completedMap[m.id]) {
+        return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -468,7 +516,7 @@ export default function Roadmap() {
       }
       return true;
     });
-  }, [allMilestones, selectedStage, selectedCategory, searchQuery]);
+  }, [allMilestones, selectedStage, selectedCategory, hideCompleted, completedMap, searchQuery]);
 
   // Calculations for progress and current stage
   const stats = useMemo(() => {
@@ -490,6 +538,16 @@ export default function Roadmap() {
       nextStepTitle: firstIncomplete ? firstIncomplete.title : "All Milestones Completed!",
       nextStepRoute: firstIncomplete?.appRoute || "/dashboard",
     };
+  }, [allMilestones, completedMap]);
+
+  // Upcoming target dates across custom milestones (next 60 days), most urgent first
+  const upcomingTargets = useMemo(() => {
+    return allMilestones
+      .filter((m) => !completedMap[m.id] && m.targetDate)
+      .map((m) => ({ milestone: m, days: daysUntil(m.targetDate) as number }))
+      .filter((t) => t.days !== null && t.days >= 0 && t.days <= 60)
+      .sort((a, b) => a.days - b.days)
+      .slice(0, 3);
   }, [allMilestones, completedMap]);
 
   const toggleMilestone = (id: string, title: string) => {
@@ -531,6 +589,7 @@ export default function Roadmap() {
       category: newCategory,
       targetMetric: newMetric.trim() || "Custom Target",
       actionTip: "Track this goal in your financial plans and review regularly.",
+      targetDate: newTargetDate || undefined,
       appRoute: "/goals",
       appRouteLabel: "Open Goals",
       isCustom: true,
@@ -542,65 +601,74 @@ export default function Roadmap() {
     setNewSubtitle("");
     setNewDesc("");
     setNewMetric("");
+    setNewTargetDate("");
     toast.success("Added new milestone to your roadmap!", { icon: "🎯" });
   };
 
+  // Stage is set by whichever answer is the MOST restrictive (lowest), never by
+  // whichever condition happens to match first. Debt and emergency-fund gaps are
+  // treated as hard floors, since compounding math doesn't care how much you've
+  // invested if 25% APR is eating it alive.
   const handleApplyQuiz = () => {
-    let suggestedStage: 1 | 2 | 3 | 4 | 5 = 1;
+    let stage: 1 | 2 | 3 | 4 | 5 = 5;
+    let reason = "You've built strong reserves, eliminated debt, and are investing consistently.";
 
-    if (quizDebt === "high" || quizEmergency === "none") {
-      suggestedStage = 1;
-    } else if (quizEmergency === "starter" || quizDebt === "moderate") {
-      suggestedStage = 2;
-    } else if (quizInvestRate === "match" || quizNetWorth === "building") {
-      suggestedStage = 3;
+    if (quizNetWorth === "building") {
+      stage = Math.min(stage, 3) as typeof stage;
     } else if (quizNetWorth === "sixfigures") {
-      suggestedStage = 4;
-    } else {
-      suggestedStage = 5;
+      stage = Math.min(stage, 4) as typeof stage;
     }
 
-    setSelectedStage(suggestedStage);
-    setQuizModalOpen(false);
-    toast.success(`Recommended: Focus on Stage ${suggestedStage}! Filter applied.`, {
-      icon: "🧭",
-      duration: 4000,
-    });
+    if (quizInvestRate === "0") {
+      stage = Math.min(stage, 2) as typeof stage;
+      reason = "You're not yet investing regularly — capturing your employer match is the next unlock.";
+    } else if (quizInvestRate === "match") {
+      stage = Math.min(stage, 3) as typeof stage;
+    }
+
+    if (quizDebt === "moderate") {
+      stage = Math.min(stage, 2) as typeof stage;
+      reason = "Moderate-rate debt (student loans, car notes) is still limiting your monthly cash flow.";
+    }
+    if (quizDebt === "high") {
+      stage = 1;
+      reason = "High-interest debt is actively working against you — this takes priority over everything else.";
+    }
+
+    if (quizEmergency === "starter") {
+      stage = Math.min(stage, 2) as typeof stage;
+    }
+    if (quizEmergency === "none") {
+      stage = 1;
+      reason = "Without even a starter emergency fund, one surprise expense can undo other progress.";
+    }
+
+    setQuizResult({ stage, reason });
+    setSelectedStage(stage);
+    toast.success(`Recommended: Focus on Stage ${stage}`, { icon: "🧭", duration: 4000 });
+  };
+
+  const handleReopenQuiz = () => {
+    setQuizResult(null);
+  };
+
+  const handleResetProgress = () => {
+    setCompletedMap({});
+    setCustomMilestones([]);
+    setResetConfirmOpen(false);
+    toast("Roadmap progress reset", { icon: "🔄" });
   };
 
   const getCategoryBadge = (cat: Exclude<MilestoneCategory, "All">) => {
-    switch (cat) {
-      case "Emergency & Savings":
-        return (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-500/20">
-            Emergency & Savings
-          </span>
-        );
-      case "Debt Elimination":
-        return (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-500/20">
-            Debt Elimination
-          </span>
-        );
-      case "Investing & Wealth":
-        return (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">
-            Investing & Wealth
-          </span>
-        );
-      case "Tax & Protection":
-        return (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
-            Tax & Protection
-          </span>
-        );
-      case "Life Milestones":
-        return (
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">
-            Life Milestones
-          </span>
-        );
-    }
+    const meta = CATEGORY_META[cat];
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${meta.classes}`}
+      >
+        {meta.icon}
+        {cat}
+      </span>
+    );
   };
 
   return (
@@ -619,6 +687,14 @@ export default function Roadmap() {
               PERSONAL WEALTH & FINANCIAL FREEDOM BLUEPRINT
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setResetConfirmOpen(true)}
+                title="Reset all progress"
+                aria-label="Reset all progress"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setQuizModalOpen(true)}
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold backdrop-blur-md transition-all cursor-pointer"
@@ -651,7 +727,7 @@ export default function Roadmap() {
                   Current Wealth Phase
                 </div>
                 <div className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
+                  <Flame className="w-5 h-5 text-orange-400" />
                   Stage {stats.currentStageNumber}: {stats.currentStageName}
                 </div>
               </div>
@@ -661,7 +737,8 @@ export default function Roadmap() {
                   <div className="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">
                     Completed Milestones
                   </div>
-                  <div className="text-xl sm:text-2xl font-bold text-emerald-400">
+                  <div className="text-xl sm:text-2xl font-bold text-emerald-400 flex items-center gap-1.5">
+                    <Award className="w-5 h-5" />
                     {stats.completedCount} <span className="text-sm font-normal text-slate-400">/ {stats.total} ({stats.percent}%)</span>
                   </div>
                 </div>
@@ -674,6 +751,7 @@ export default function Roadmap() {
                     to={stats.nextStepRoute}
                     className="text-xs font-bold text-violet-300 hover:text-white flex items-center justify-end gap-1 group"
                   >
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
                     <span className="max-w-[180px] truncate">{stats.nextStepTitle}</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
@@ -688,6 +766,23 @@ export default function Roadmap() {
                 style={{ width: `${Math.max(5, stats.percent)}%` }}
               />
             </div>
+
+            {/* Upcoming target dates */}
+            {upcomingTargets.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+                  <Calendar className="w-3.5 h-3.5" /> Coming up:
+                </span>
+                {upcomingTargets.map(({ milestone, days }) => (
+                  <span
+                    key={milestone.id}
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-white/10 text-slate-200 border border-white/10"
+                  >
+                    {milestone.title} · {days === 0 ? "today" : `${days}d`}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -742,7 +837,7 @@ export default function Roadmap() {
       </div>
 
       {/* ========================================================================= */}
-      {/* CONTROLS: SEARCH & CATEGORY CHIPS */}
+      {/* CONTROLS: SEARCH, CATEGORY CHIPS & FOCUS TOGGLE */}
       {/* ========================================================================= */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/60 p-4 mb-6 transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -764,20 +859,35 @@ export default function Roadmap() {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  selectedCategory === cat
-                    ? "bg-violet-600 text-white shadow-xs"
-                    : "bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    selectedCategory === cat
+                      ? "bg-violet-600 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setHideCompleted((v) => !v)}
+              title={hideCompleted ? "Show completed milestones" : "Hide completed milestones"}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition-all cursor-pointer ${
+                hideCompleted
+                  ? "bg-slate-900 text-white border-slate-900 dark:bg-slate-700 dark:border-slate-600"
+                  : "bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-violet-300"
+              }`}
+            >
+              {hideCompleted ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              {hideCompleted ? "Focus mode" : "Show all"}
+            </button>
           </div>
         </div>
       </div>
@@ -785,161 +895,195 @@ export default function Roadmap() {
       {/* ========================================================================= */}
       {/* MILESTONES BY STAGE */}
       {/* ========================================================================= */}
-      <div className="space-y-8">
-        {(selectedStage === "all" ? [1, 2, 3, 4, 5] : [selectedStage]).map((stageNum) => {
-          const stageDef = STAGES.find((s) => s.number === stageNum);
-          const stageItems = filteredMilestones.filter((m) => m.stageNumber === stageNum);
+      {filteredMilestones.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+          <Sliders className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-3" />
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">No milestones match your filters</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-sm">
+            Try clearing your search, switching category, or turning off focus mode.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("All");
+              setHideCompleted(false);
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white cursor-pointer"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {(selectedStage === "all" ? [1, 2, 3, 4, 5] : [selectedStage]).map((stageNum) => {
+            const stageDef = STAGES.find((s) => s.number === stageNum);
+            const stageItems = filteredMilestones.filter((m) => m.stageNumber === stageNum);
 
-          if (stageItems.length === 0) return null;
+            if (stageItems.length === 0) return null;
 
-          const stageDoneCount = stageItems.filter((m) => !!completedMap[m.id]).length;
-          const isAllStageDone = stageDoneCount === stageItems.length;
+            const stageAllItems = allMilestones.filter((m) => m.stageNumber === stageNum);
+            const stageDoneCount = stageAllItems.filter((m) => !!completedMap[m.id]).length;
+            const isAllStageDone = stageAllItems.length > 0 && stageDoneCount === stageAllItems.length;
 
-          return (
-            <div key={stageNum} className="relative">
-              {/* Stage Header Banner */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-black text-sm shadow-md">
-                    {stageNum}
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      Stage {stageNum}: {stageDef?.name}
-                      {isAllStageDone && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Stage Cleared
-                        </span>
-                      )}
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {stageDef?.tagline}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  {stageDoneCount} of {stageItems.length} completed
-                </div>
-              </div>
-
-              {/* Milestones Cards Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {stageItems.map((milestone) => {
-                  const isDone = !!completedMap[milestone.id];
-
-                  return (
-                    <div
-                      key={milestone.id}
-                      className={`group relative flex flex-col justify-between rounded-2xl p-5 border transition-all duration-200 shadow-xs ${
-                        isDone
-                          ? "bg-emerald-500/5 dark:bg-emerald-950/10 border-emerald-400/40 dark:border-emerald-500/30"
-                          : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-md"
-                      }`}
-                    >
-                      <div>
-                        {/* Card Header: Checkbox + Badges */}
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <button
-                            onClick={() => toggleMilestone(milestone.id, milestone.title)}
-                            className="flex items-center gap-2.5 text-left cursor-pointer focus:outline-none group/check"
-                          >
-                            <div
-                              className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                                isDone
-                                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                                  : "border-2 border-slate-300 dark:border-slate-600 group-hover/check:border-violet-500 text-transparent"
-                              }`}
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </div>
-                            <span
-                              className={`text-xs font-bold uppercase tracking-wider ${
-                                isDone
-                                  ? "text-emerald-600 dark:text-emerald-400"
-                                  : "text-slate-400 dark:text-slate-500"
-                              }`}
-                            >
-                              {isDone ? "Completed" : "In Progress"}
-                            </span>
-                          </button>
-
-                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                            {getCategoryBadge(milestone.category)}
-                            {milestone.isCustom && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-600 dark:text-violet-300">
-                                Custom
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Title & Subtitle */}
-                        <h3
-                          className={`text-base font-bold mb-1 transition-colors ${
-                            isDone
-                              ? "text-slate-700 dark:text-slate-200 line-through opacity-85"
-                              : "text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400"
-                          }`}
-                        >
-                          {milestone.title}
-                        </h3>
-                        <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-2">
-                          {milestone.subtitle}
-                        </p>
-
-                        {/* Description */}
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                          {milestone.description}
-                        </p>
-
-                        {/* Action Tip */}
-                        <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 mb-4 border border-slate-100 dark:border-slate-700/50">
-                          <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1">
-                            <Sparkles className="w-3 h-3 text-amber-500" />
-                            Action Strategy:
-                          </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                            {milestone.actionTip}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Card Footer: Target Metric + Direct In-App Link */}
-                      <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 mt-auto">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
-                          <Target className="w-3.5 h-3.5 text-indigo-500" />
-                          <span>{milestone.targetMetric}</span>
-                        </div>
-
-                        {milestone.appRoute && (
-                          <Link
-                            to={milestone.appRoute}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
-                          >
-                            <span>{milestone.appRouteLabel || "Take Action"}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        )}
-                      </div>
+            return (
+              <div key={stageNum} className="relative">
+                {/* Stage Header Banner */}
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-black text-sm shadow-md">
+                      {stageNum}
                     </div>
-                  );
-                })}
+                    <div>
+                      <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        Stage {stageNum}: {stageDef?.name}
+                        {isAllStageDone && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            <Award className="w-3.5 h-3.5" /> Stage Cleared
+                          </span>
+                        )}
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {stageDef?.tagline}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {stageDoneCount} of {stageAllItems.length} completed
+                  </div>
+                </div>
+
+                {/* Milestones Cards Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {stageItems.map((milestone) => {
+                    const isDone = !!completedMap[milestone.id];
+                    const remaining = daysUntil(milestone.targetDate);
+
+                    return (
+                      <div
+                        key={milestone.id}
+                        className={`group relative flex flex-col justify-between rounded-2xl p-5 border transition-all duration-200 shadow-xs ${
+                          isDone
+                            ? "bg-emerald-500/5 dark:bg-emerald-950/10 border-emerald-400/40 dark:border-emerald-500/30"
+                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-md"
+                        }`}
+                      >
+                        <div>
+                          {/* Card Header: Checkbox + Badges */}
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <button
+                              onClick={() => toggleMilestone(milestone.id, milestone.title)}
+                              className="flex items-center gap-2.5 text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 rounded-lg group/check"
+                              aria-pressed={isDone}
+                              aria-label={isDone ? `Mark "${milestone.title}" as in progress` : `Mark "${milestone.title}" as completed`}
+                            >
+                              <div
+                                className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                                  isDone
+                                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                                    : "border-2 border-slate-300 dark:border-slate-600 group-hover/check:border-violet-500 text-transparent"
+                                }`}
+                              >
+                                {isDone ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-3 h-3 opacity-0" />}
+                              </div>
+                              <span
+                                className={`text-xs font-bold uppercase tracking-wider ${
+                                  isDone
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : "text-slate-400 dark:text-slate-500"
+                                }`}
+                              >
+                                {isDone ? "Completed" : "In Progress"}
+                              </span>
+                            </button>
+
+                            <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                              {getCategoryBadge(milestone.category)}
+                              {milestone.isCustom && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-600 dark:text-violet-300">
+                                  Custom
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Title & Subtitle */}
+                          <h3
+                            className={`text-base font-bold mb-1 transition-colors ${
+                              isDone
+                                ? "text-slate-700 dark:text-slate-200 line-through opacity-85"
+                                : "text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400"
+                            }`}
+                          >
+                            {milestone.title}
+                          </h3>
+                          <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-2">
+                            {milestone.subtitle}
+                          </p>
+
+                          {/* Description */}
+                          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
+                            {milestone.description}
+                          </p>
+
+                          {/* Action Tip */}
+                          <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-3 mb-4 border border-slate-100 dark:border-slate-700/50">
+                            <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1">
+                              <Sparkles className="w-3 h-3 text-amber-500" />
+                              Action Strategy:
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                              {milestone.actionTip}
+                            </p>
+                          </div>
+
+                          {/* Optional target date */}
+                          {milestone.targetDate && !isDone && (
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 mb-3">
+                              <Calendar className="w-3 h-3" />
+                              Target: {new Date(milestone.targetDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                              {remaining !== null && remaining >= 0 && <span className="text-slate-400">({remaining}d left)</span>}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Card Footer: Target Metric + Direct In-App Link */}
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 mt-auto">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <Target className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>{milestone.targetMetric}</span>
+                          </div>
+
+                          {milestone.appRoute && (
+                            <Link
+                              to={milestone.appRoute}
+                              className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+                            >
+                              <span>{milestone.appRouteLabel || "Take Action"}</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* FINANCIAL STAGE DIAGNOSTIC QUIZ MODAL */}
       {/* ========================================================================= */}
       {quizModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative max-h-[90vh] overflow-y-auto">
             <button
-              onClick={() => setQuizModalOpen(false)}
+              onClick={() => { setQuizModalOpen(false); setQuizResult(null); }}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer"
+              aria-label="Close quiz"
             >
               <X className="w-5 h-5" />
             </button>
@@ -948,195 +1092,173 @@ export default function Roadmap() {
               <Compass className="w-5 h-5" />
               <span className="text-xs font-bold uppercase tracking-wider">Self Assessment</span>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-              Find Your Current Financial Stage
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-5">
-              Answer four quick questions about your current accounts and we will calculate which stage of wealth building you should focus on today.
-            </p>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  1. Do you have a starter emergency fund?
-                </label>
-                <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+            {!quizResult ? (
+              <>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Find Your Current Financial Stage
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-5">
+                  Answer four quick questions about your current accounts. We'll flag whichever answer is holding you back the most — that's the stage to focus on first.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      1. Do you have a starter emergency fund?
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                      {([
+                        { v: "none", label: "Less than $1k" },
+                        { v: "starter", label: "$1,000 - $3,000" },
+                        { v: "full", label: "3-6 Months Full" },
+                      ] as { v: QuizEmergency; label: string }[]).map((opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setQuizEmergency(opt.v)}
+                          className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                            quizEmergency === opt.v
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      2. What is your non-mortgage debt status?
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                      {([
+                        { v: "high", label: "Have Credit Cards" },
+                        { v: "moderate", label: "Car / Student Loan" },
+                        { v: "none", label: "100% Debt Free" },
+                      ] as { v: QuizDebt; label: string }[]).map((opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setQuizDebt(opt.v)}
+                          className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                            quizDebt === opt.v
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      3. Are you currently investing monthly?
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                      {([
+                        { v: "0", label: "Not Yet" },
+                        { v: "match", label: "Employer Match Only" },
+                        { v: "max", label: "Maxing Out IRA/401k" },
+                      ] as { v: QuizInvestRate; label: string }[]).map((opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setQuizInvestRate(opt.v)}
+                          className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                            quizInvestRate === opt.v
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      4. Approximate total invested wealth?
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+                      {([
+                        { v: "building", label: "Under $50,000" },
+                        { v: "sixfigures", label: "$100k - $500k" },
+                        { v: "fire", label: "$500k+ / Near FIRE" },
+                      ] as { v: QuizNetWorth; label: string }[]).map((opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setQuizNetWorth(opt.v)}
+                          className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                            quizNetWorth === opt.v
+                              ? "bg-violet-600 text-white border-violet-600"
+                              : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-5">
                   <button
                     type="button"
-                    onClick={() => setQuizEmergency("none")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizEmergency === "none"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
+                    onClick={() => setQuizModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
                   >
-                    Less than $1k
+                    Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={() => setQuizEmergency("starter")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizEmergency === "starter"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
+                    onClick={handleApplyQuiz}
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:from-violet-500 hover:to-indigo-500 cursor-pointer"
                   >
-                    $1,000 - $3,000
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizEmergency("full")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizEmergency === "full"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    3-6 Months Full
+                    Calculate My Stage
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  2. What is your non-mortgage debt status?
-                </label>
-                <div className="grid grid-cols-3 gap-2 text-xs font-medium">
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-black text-xl shadow-lg mb-4 mx-auto">
+                  {quizResult.stage}
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1 text-center">
+                  Focus on Stage {quizResult.stage}: {STAGES.find((s) => s.number === quizResult.stage)?.name}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-5 text-center leading-relaxed">
+                  {quizResult.reason}
+                </p>
+                <div className="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4 mb-5 border border-slate-100 dark:border-slate-700/50">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Your stage is set by whichever answer is furthest behind, not by an average — a strong investment balance doesn't offset high-interest debt still compounding against you.
+                  </p>
+                </div>
+                <div className="flex justify-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setQuizDebt("high")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizDebt === "high"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
+                    onClick={handleReopenQuiz}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
                   >
-                    Have Credit Cards
+                    Retake Quiz
                   </button>
                   <button
                     type="button"
-                    onClick={() => setQuizDebt("moderate")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizDebt === "moderate"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
+                    onClick={() => { setQuizModalOpen(false); setQuizResult(null); }}
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:from-violet-500 hover:to-indigo-500 cursor-pointer"
                   >
-                    Car / Student Loan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizDebt("none")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizDebt === "none"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    100% Debt Free
+                    View Stage {quizResult.stage} Milestones
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  3. Are you currently investing monthly?
-                </label>
-                <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setQuizInvestRate("0")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizInvestRate === "0"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    Not Yet
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizInvestRate("match")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizInvestRate === "match"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    Employer Match Only
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizInvestRate("max")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizInvestRate === "max"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    Maxing Out IRA/401k
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  4. Approximate total invested wealth?
-                </label>
-                <div className="grid grid-cols-3 gap-2 text-xs font-medium">
-                  <button
-                    type="button"
-                    onClick={() => setQuizNetWorth("building")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizNetWorth === "building"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    Under $50,000
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizNetWorth("sixfigures")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizNetWorth === "sixfigures"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    $100k - $500k
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setQuizNetWorth("fire")}
-                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
-                      quizNetWorth === "fire"
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    $500k+ / Near FIRE
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-5">
-              <button
-                type="button"
-                onClick={() => setQuizModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyQuiz}
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:from-violet-500 hover:to-indigo-500 cursor-pointer"
-              >
-                Calculate My Stage
-              </button>
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1146,10 +1268,11 @@ export default function Roadmap() {
       {/* ========================================================================= */}
       {customModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setCustomModalOpen(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1216,18 +1339,31 @@ export default function Roadmap() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Target Amount / Metric *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newMetric}
-                  onChange={(e) => setNewMetric(e.target.value)}
-                  placeholder="e.g. $60,000 Down Payment or 0% Auto Loan"
-                  className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Target Amount / Metric *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newMetric}
+                    onChange={(e) => setNewMetric(e.target.value)}
+                    placeholder="e.g. $60,000 Down Payment"
+                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Target Date (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={newTargetDate}
+                    onChange={(e) => setNewTargetDate(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
               </div>
 
               <div>
@@ -1259,6 +1395,42 @@ export default function Roadmap() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* RESET PROGRESS CONFIRMATION MODAL */}
+      {/* ========================================================================= */}
+      {resetConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 mb-3">
+              <RefreshCw className="w-5 h-5" />
+              <span className="text-xs font-bold uppercase tracking-wider">Reset Roadmap</span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+              Clear all progress and custom milestones?
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-6">
+              This unchecks every completed milestone and removes any custom milestones you've added. This can't be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setResetConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetProgress}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md cursor-pointer"
+              >
+                Reset Everything
+              </button>
+            </div>
           </div>
         </div>
       )}

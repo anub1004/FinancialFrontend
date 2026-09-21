@@ -4,8 +4,9 @@ import { ApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
 import {
   Plus, Pencil, Trash2, X, Loader, TrendingUp, TrendingDown, PieChart,
-  ChevronLeft, ChevronRight, BarChart3, Briefcase
+  ChevronLeft, ChevronRight, BarChart3, Briefcase, Download
 } from "lucide-react";
+import { exportToCsv } from "../../utils/csvExport";
 
 interface InvestmentItem {
   investmentId: string;
@@ -152,9 +153,36 @@ function Investment() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">Investments</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track your investment portfolio</p>
         </div>
-        <button onClick={openCreate} className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors">
-          <Plus className="w-4 h-4" /> Add Investment
-        </button>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+          <button
+            onClick={() => {
+              if (investments.length === 0) { toast.error("No investments to export"); return; }
+              const headers = ["Name", "Type", "Amount Invested", "Current Value", "Returns", "Return %", "Status", "Currency", "Start Date", "End Date", "Notes"];
+              const rows = investments.map((inv) => [
+                inv.name,
+                inv.investmentType,
+                inv.amount.toString(),
+                inv.currentValue.toString(),
+                (inv.returns ?? 0).toString(),
+                (inv.returnPercentage ?? 0).toFixed(2) + "%",
+                inv.status,
+                inv.currency,
+                new Date(inv.startDate).toLocaleDateString("en-IN"),
+                inv.endDate ? new Date(inv.endDate).toLocaleDateString("en-IN") : "",
+                inv.notes || "",
+              ]);
+              exportToCsv(`investments_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
+              toast.success("CSV exported!");
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors">
+            <Plus className="w-4 h-4" /> Add Investment
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Summary Cards */}

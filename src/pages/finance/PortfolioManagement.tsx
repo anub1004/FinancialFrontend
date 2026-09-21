@@ -4,8 +4,9 @@ import { PortfolioApiConfig } from "../../config/apiconfig";
 import toast from "react-hot-toast";
 import {
   Briefcase, Loader, TrendingUp, TrendingDown, PieChart,
-  BarChart3, ArrowUpRight, ArrowDownRight, Plus, Pencil, Trash2, X
+  BarChart3, ArrowUpRight, ArrowDownRight, Plus, Pencil, Trash2, X, Download
 } from "lucide-react";
+import { exportToCsv } from "../../utils/csvExport";
 
 // ── Types ────────────────────────────────────────────────────────────────
 interface PortfolioAssetDto {
@@ -197,10 +198,36 @@ function PortfolioManagement() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-100">Portfolio Management</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Advanced portfolio analysis with allocation & rebalancing</p>
         </div>
-        <button onClick={openCreate}
-          className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors">
-          <Plus className="w-4 h-4" /> Add Asset
-        </button>
+        <div className="flex gap-2 mt-4 sm:mt-0">
+          <button
+            onClick={() => {
+              if (assets.length === 0) { toast.error("No assets to export"); return; }
+              const headers = ["Name", "Asset Type", "Invested Amount", "Current Value", "P/L", "Return %", "Allocation %", "Currency", "Purchase Date", "Notes"];
+              const rows = assets.map((a) => [
+                a.name,
+                a.assetType,
+                a.investedAmount.toString(),
+                a.currentValue.toString(),
+                a.profitLoss.toString(),
+                a.returnPercentage.toFixed(2) + "%",
+                a.allocationPercentage.toFixed(2) + "%",
+                a.currency,
+                new Date(a.purchaseDate).toLocaleDateString("en-IN"),
+                a.notes || "",
+              ]);
+              exportToCsv(`portfolio_${new Date().toISOString().split("T")[0]}.csv`, headers, rows);
+              toast.success("CSV exported!");
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg shadow-sm transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
+          <button onClick={openCreate}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm transition-colors">
+            <Plus className="w-4 h-4" /> Add Asset
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Summary */}
